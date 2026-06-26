@@ -13,11 +13,17 @@ class HistoryPage extends StatelessWidget {
   // 簡潔的星等顯示
   Widget _buildStarRating(int score) {
     int starCount = 0;
-    if (score > 80) starCount = 5;
-    else if (score > 60) starCount = 4;
-    else if (score > 40) starCount = 3;
-    else if (score > 20) starCount = 2;
-    else starCount = 1;
+    if (score > 80) {
+      starCount = 5;
+    } else if (score > 60) {
+      starCount = 4;
+    } else if (score > 40) {
+      starCount = 3;
+    } else if (score > 20) {
+      starCount = 2;
+    } else {
+      starCount = 1;
+    }
 
     return Row(
       children: List.generate(5, (index) {
@@ -52,6 +58,7 @@ class HistoryPage extends StatelessWidget {
               final Map<String, dynamic> resultJson = jsonDecode(item['resultJson']);
               final result = HealthResult.fromJson(resultJson);
               final score = result.healthScore;
+              final syncStatus = (item['syncStatus'] ?? 'pending').toString();
               
               Color scoreColor = score > 75 ? Colors.greenAccent : (score > 50 ? Colors.orangeAccent : Colors.redAccent);
               
@@ -109,6 +116,8 @@ class HistoryPage extends StatelessWidget {
                                 _buildStarRating(score),
                               ],
                             ),
+                            const SizedBox(height: 6),
+                            _buildSyncChip(syncStatus),
                           ],
                         ),
                       ),
@@ -122,6 +131,28 @@ class HistoryPage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSyncChip(String status) {
+    final synced = status == 'synced';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          synced ? Icons.cloud_done_rounded : Icons.cloud_upload_outlined,
+          size: 13,
+          color: synced ? Colors.greenAccent : Colors.orangeAccent,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          synced ? "已同步" : "待同步",
+          style: TextStyle(
+            color: synced ? Colors.greenAccent : Colors.orangeAccent,
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 

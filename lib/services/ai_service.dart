@@ -42,6 +42,9 @@ class AIService {
   "sugar": 數值,
   "sodium": 數值,
   "fat": 數值,
+  "protein": 數值,
+  "carbs": 數值,
+  "fiber": 數值,
   "assessment": "• 評估1\\n\\n• 評估2",
   "recommendation": "建議"
 }

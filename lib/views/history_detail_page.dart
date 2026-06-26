@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import '../models/food_entry.dart';
 import '../models/health_result.dart';
+import '../services/cloud_sync_service.dart';
+import '../services/db_service.dart';
 import '../widgets/result_card.dart';
 
 class HistoryDetailPage extends StatelessWidget {
   final String? imagePath;
   final HealthResult result;
+  final DBService _dbService = DBService();
+  final CloudSyncService _cloudSyncService = CloudSyncService();
+  final Uuid _uuid = const Uuid();
 
-  const HistoryDetailPage({super.key, this.imagePath, required this.result});
+  HistoryDetailPage({super.key, this.imagePath, required this.result});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +25,26 @@ class HistoryDetailPage extends StatelessWidget {
         imagePath: imagePath,
         result: result,
         onReset: () => Navigator.pop(context), // 在詳情頁，重新掃描就是回到紀錄列表
+        onSaveToDiary: () => _saveToDiary(context),
       ),
+    );
+  }
+
+  Future<void> _saveToDiary(BuildContext context) async {
+    final now = DateTime.now();
+    final entry = FoodEntry.fromHealthResult(
+      result,
+      localId: _uuid.v4(),
+      consumedAt: now,
+      mealType: 'snack',
+    );
+    await _dbService.insertFoodEntry(entry);
+    try {
+      await _cloudSyncService.syncPending();
+    } catch (_) {}
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("已記錄到飲食日記"), backgroundColor: Color(0xFF00B894)),
     );
   }
 }

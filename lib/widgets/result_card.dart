@@ -8,12 +8,14 @@ class ResultCard extends StatelessWidget {
   final String? imagePath;
   final HealthResult result;
   final VoidCallback onReset;
+  final Future<void> Function()? onSaveToDiary;
 
   const ResultCard({
     super.key,
     this.imagePath,
     required this.result,
     required this.onReset,
+    this.onSaveToDiary,
   });
 
   // 自動清洗字串，移除殘留的 Markdown 符號（用於不支援 Markdown 的純文字欄位）
@@ -74,16 +76,35 @@ class ResultCard extends StatelessWidget {
             
             const SizedBox(height: 30),
             Center(
-              child: ElevatedButton.icon(
-                onPressed: onReset,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white10,
-                  foregroundColor: Colors.white70,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text("重新掃描"),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (onSaveToDiary != null)
+                    ElevatedButton.icon(
+                      onPressed: onSaveToDiary,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00B894),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      ),
+                      icon: const Icon(Icons.restaurant_menu_rounded),
+                      label: const Text("記錄飲食"),
+                    ),
+                  ElevatedButton.icon(
+                    onPressed: onReset,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white10,
+                      foregroundColor: Colors.white70,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text("重新掃描"),
+                  ),
+                ],
               ),
             ),
           ],
@@ -153,13 +174,19 @@ class ResultCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 18,
+        alignment: WrapAlignment.spaceAround,
         children: [
+          _buildNutritionItem("等級", result.nutritionGrade, ""),
           _buildNutritionItem("熱量", "${result.calories}", "kcal"),
+          _buildNutritionItem("蛋白質", _formatNumber(result.protein), "g"),
+          _buildNutritionItem("碳水", _formatNumber(result.carbs), "g"),
           _buildNutritionItem("糖分", "${result.sugar}", "g"),
           _buildNutritionItem("鈉", "${result.sodium}", "mg"),
           _buildNutritionItem("脂肪", "${result.fat}", "g"),
+          _buildNutritionItem("纖維", _formatNumber(result.fiber), "g"),
         ],
       ),
     );
@@ -174,6 +201,11 @@ class ResultCard extends StatelessWidget {
         Text(unit, style: const TextStyle(fontSize: 10, color: Colors.white24)),
       ],
     );
+  }
+
+  String _formatNumber(double value) {
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    return value.toStringAsFixed(1);
   }
 
   Widget _buildIngredientDetail(String title, List<String> items, String reason, Color color) {

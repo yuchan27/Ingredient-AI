@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,9 +6,13 @@ import 'package:path/path.dart' as p;
 import 'package:shimmer/shimmer.dart';
 import 'package:lottie/lottie.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:uuid/uuid.dart';
+import '../models/food_entry.dart';
 import '../models/health_result.dart';
 import '../services/ai_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../services/db_service.dart';
+import '../services/voice_input_service.dart';
 import '../widgets/result_card.dart';
 
 class AnalyzerPage extends StatefulWidget {
@@ -26,7 +29,12 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
   final TextEditingController _nameController = TextEditingController();
   final AIService _aiService = AIService();
   final DBService _dbService = DBService();
+  final CloudSyncService _cloudSyncService = CloudSyncService();
+  final VoiceInputService _voiceInputService = VoiceInputService();
   final ImagePicker _picker = ImagePicker();
+  final Uuid _uuid = const Uuid();
+  String _selectedMealType = 'snack';
+  bool _isListening = false;
 
   // 智慧壓縮圖片並儲存到文件目錄（永不消失）
   Future<String?> _compressAndSaveImage(File file) async {
@@ -57,6 +65,28 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
     setState(() => _image = File(pickedFile.path));
   }
 
+  Future<void> _listenForFoodName() async {
+    setState(() => _isListening = true);
+    try {
+      final text = await _voiceInputService.listenOnce();
+      if (!mounted) return;
+      if (text == null || text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("沒有辨識到語音"), backgroundColor: Colors.orange),
+        );
+        return;
+      }
+      _nameController.text = text;
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("語音輸入失敗: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isListening = false);
+    }
+  }
+
   Future<void> _startAnalysis() async {
     final String foodName = _nameController.text.trim();
     if (foodName.isEmpty && _image == null) {
@@ -76,6 +106,12 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
       }
 
       final result = await _aiService.analyzeIngredients(_image, foodName);
+      final diaryEntry = FoodEntry.fromHealthResult(
+        result,
+        localId: _uuid.v4(),
+        consumedAt: DateTime.now(),
+        mealType: _selectedMealType,
+      );
       
       if (!mounted) return;
       setState(() {
@@ -83,6 +119,12 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
       });
 
       await _dbService.insertHistory(finalSavedPath ?? "", result.toJson());
+      await _dbService.insertFoodEntry(diaryEntry);
+      try {
+        await _cloudSyncService.syncPending();
+      } catch (syncError) {
+        debugPrint("同步暫時失敗，資料已保留在本地: $syncError");
+      }
 
     } catch (e) {
       if (!mounted) return;
@@ -92,6 +134,13 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _voiceInputService.stop();
+    super.dispose();
   }
 
   @override
@@ -107,6 +156,7 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
                   _image = null; 
                   _result = null; 
                   _nameController.clear();
+                  _selectedMealType = 'snack';
                 });
               },
             )
@@ -117,7 +167,12 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
         child: _isLoading 
           ? _buildLoadingUI() 
           : (_result != null ? ResultCard(imagePath: _image?.path, result: _result!, onReset: () {
-              setState(() { _image = null; _result = null; _nameController.clear(); });
+              setState(() { 
+                _image = null; 
+                _result = null; 
+                _nameController.clear(); 
+                _selectedMealType = 'snack';
+              });
             }) : _buildHomeUI()),
       ),
     );
@@ -150,7 +205,38 @@ class _AnalyzerPageState extends State<AnalyzerPage> {
               fillColor: const Color(0xFF1A1A1A),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF00B894)),
+              suffixIcon: IconButton(
+                tooltip: "語音輸入",
+                onPressed: _isListening ? null : _listenForFoodName,
+                icon: Icon(
+                  _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                  color: const Color(0xFF00B894),
+                ),
+              ),
             ),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedMealType,
+            dropdownColor: const Color(0xFF1A1A1A),
+            decoration: InputDecoration(
+              labelText: "餐別",
+              labelStyle: const TextStyle(color: Color(0xFF00B894)),
+              filled: true,
+              fillColor: const Color(0xFF1A1A1A),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              prefixIcon: const Icon(Icons.restaurant_rounded, color: Color(0xFF00B894)),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'breakfast', child: Text("早餐")),
+              DropdownMenuItem(value: 'lunch', child: Text("午餐")),
+              DropdownMenuItem(value: 'dinner', child: Text("晚餐")),
+              DropdownMenuItem(value: 'snack', child: Text("點心")),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedMealType = value);
+            },
           ),
           
           const SizedBox(height: 24),

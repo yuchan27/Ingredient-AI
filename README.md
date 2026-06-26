@@ -1,43 +1,87 @@
-# AI 原材料安全檢查員 (AI Food Ingredient Analyzer 2.5)
+# AI 食品成分與營養分析 App
 
-這是一款基於 Google Gemini 2.5 Flash 核心的高質感食品原材料分析 App，旨在幫助使用者快速辨識食品中的健康與有害成分，並提供專業的營養點評。
+Flutter 期末專案：使用 Gemini 分析食品名稱或照片，產生健康分數、營養素、成分風險與飲食建議。專案已加入本地 SQLite 離線儲存、飲食日記、營養 Dashboard、語音輸入，以及 Neon Postgres 雲端同步架構。
 
-## 🌟 核心功能
+## 功能
 
-- **AI 2.5 深度解析**：利用最新的 Gemini 2.5 Flash 模型，針對食品成分進行多模態（圖片+文字）分析。
-- **混合輸入分析**：支援「產品名稱文字」與「包裝成分表照片」混合輸入。即使沒有照片，也能根據產品名稱進行精確分析。
-- **全方位營養指標**：記錄熱量 (kcal)、糖分 (g)、鈉含量 (mg) 與脂肪量 (g)。
-- **專業條列式報告**：使用 Markdown 渲染，將健康與有害理由進行條列化與重點標註。
-- **Noto Sans TC 字型**：採用合法、開源且高品質的思源黑體，提供極佳的中文閱讀體驗。
-- **永久紀錄存儲**：採用 SQLite 儲存所有分析結果，支援隨時查看歷史紀錄。
+- AI 食品分析：輸入食品名稱或拍照，取得健康評分與營養分析。
+- 營養紀錄：自動把分析結果保存為飲食日記。
+- Dashboard：統計今日熱量、蛋白質、碳水、脂肪、糖、鈉、纖維與平均分數。
+- 掃描歷史：保存每次 AI 分析結果，並顯示待同步/已同步狀態。
+- 語音輸入：可用麥克風輸入產品名稱。
+- 離線可用：沒有網路時資料仍會寫入本地 SQLite。
+- Neon 雲端同步：透過 `server/` Node API 連接 Neon Postgres，避免在 App 中暴露資料庫密碼。
 
-## 📲 使用者操作流程
+## Flutter App 執行
 
-1. **輸入資訊**：在首頁輸入產品名稱（例如：紅龍雞塊、義美全脂鮮乳）。這能幫助 AI 進行更精準的數據比對。
-2. **選取圖片 (選擇性)**：
-   - 點擊「拍照」對準食品包裝的成分表。
-   - 點擊「相簿」選取現有的包裝照片。
-   - 若不提供圖片，AI 將僅根據產品名稱進行分析。
-3. **確認預覽**：若有提供圖片，介面將顯示預覽圖。您可以點擊 X 移除並更換。
-4. **啟動分析**：點擊下方的「**開始 AI 分析**」大按鈕。
-5. **查閱報告**：AI 將在數秒內生成包含健康評分、營養數值與詳細理由的 Markdown 報告。
-6. **歷史紀錄**：所有分析過的項目都會自動儲存在「掃描紀錄」分頁中。
+1. 建立 `.env`：
 
-## 🛠️ 技術架構 (模組化設計)
+```text
+GEMINI_API_KEY=your_gemini_api_key
+NEON_API_BASE_URL=http://10.0.2.2:8787
+```
 
-- `/lib/models/`：資料結構與 JSON 序列化。
-- `/lib/services/`：AI API 通訊 (AIService) 與資料庫操作 (DBService)。
-- `/lib/views/`：分析頁面與紀錄頁面的 UI 邏輯。
-- `/lib/widgets/`：可重用的高品質 UI 組件 (ResultCard)。
-- `/lib/utils/`：常數與通用工具。
+`NEON_API_BASE_URL` 未設定時，App 會自動進入本地模式。
 
-## 🚀 開發者設定
+2. 安裝套件並執行：
 
-1. 在根目錄建立 `.env` 檔案並填入：
-   `GEMINI_API_KEY=你的金鑰`
-2. 執行 `flutter pub get`。
-3. 執行 `flutter run`。
+```powershell
+flutter pub get
+flutter run
+```
 
----
+3. 建置 APK：
 
-*提醒：本 App 提供之建議僅供參考，不具醫療診斷效力。*
+```powershell
+flutter build apk --debug
+flutter build apk --release
+```
+
+## Neon Postgres API
+
+Flutter App 不直接連 Postgres；雲端同步走 `server/`：
+
+```powershell
+npm install --prefix server
+```
+
+複製 `server/.env.example` 成 `server/.env`：
+
+```text
+DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require
+JWT_SECRET=replace-with-a-long-random-secret
+PORT=8787
+```
+
+先在 Neon SQL Editor 執行：
+
+```text
+neon/schema.sql
+```
+
+啟動 API：
+
+```powershell
+npm --prefix server run dev
+```
+
+Android 模擬器連本機 API 時，`NEON_API_BASE_URL` 使用：
+
+```text
+http://10.0.2.2:8787
+```
+
+## 驗證命令
+
+```powershell
+flutter test test/models test/services
+flutter analyze
+node --check server/src/index.js
+flutter build apk --release
+```
+
+## 期末報告與素材
+
+- Word 報告：`C11215139_medium_Flutter_final_report.docx`
+- App 截圖：`artifacts/screenshots/`
+- 操作影片：`artifacts/videos/ingredient_ai_demo.mp4`
