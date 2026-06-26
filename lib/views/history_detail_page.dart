@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+
 import '../models/food_entry.dart';
 import '../models/health_result.dart';
 import '../services/cloud_sync_service.dart';
@@ -19,12 +20,15 @@ class HistoryDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(result.foodName, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          result.foodName,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: ResultCard(
         imagePath: imagePath,
         result: result,
-        onReset: () => Navigator.pop(context), // 在詳情頁，重新掃描就是回到紀錄列表
+        onReset: () => Navigator.pop(context),
         onSaveToDiary: () => _saveToDiary(context),
       ),
     );
@@ -44,7 +48,10 @@ class HistoryDetailPage extends StatelessWidget {
     } catch (_) {}
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("已記錄到飲食日記"), backgroundColor: Color(0xFF00B894)),
+      const SnackBar(
+        content: Text("已加入飲食紀錄"),
+        backgroundColor: Color(0xFF00B894),
+      ),
     );
   }
 }

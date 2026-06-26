@@ -10,6 +10,7 @@ class DailyNutritionSummary {
   final double totalSugar;
   final double totalSodium;
   final double totalFiber;
+  final double totalCost;
   final double averageHealthScore;
 
   const DailyNutritionSummary({
@@ -22,6 +23,7 @@ class DailyNutritionSummary {
     required this.totalSugar,
     required this.totalSodium,
     required this.totalFiber,
+    required this.totalCost,
     required this.averageHealthScore,
   });
 
@@ -36,6 +38,7 @@ class DailyNutritionSummary {
       totalSugar: 0,
       totalSodium: 0,
       totalFiber: 0,
+      totalCost: 0,
       averageHealthScore: 0,
     );
   }
@@ -78,10 +81,12 @@ class NutritionAnalyticsService {
         totalSugar: _sum(dayEntries, (item) => item.sugar),
         totalSodium: _sum(dayEntries, (item) => item.sodium),
         totalFiber: _sum(dayEntries, (item) => item.fiber),
-        averageHealthScore: dayEntries.isEmpty ? 0 : totalScore / dayEntries.length,
+        totalCost: _sum(dayEntries, (item) => item.cost),
+        averageHealthScore: dayEntries.isEmpty
+            ? 0
+            : totalScore / dayEntries.length,
       );
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
 
     return summaries;
   }

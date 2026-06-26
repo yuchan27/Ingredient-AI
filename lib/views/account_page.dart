@@ -41,13 +41,16 @@ class _AccountPageState extends State<AccountPage> {
       final state = await action();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: const Color(0xFF00B894)),
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: const Color(0xFF00B894),
+        ),
       );
       await _refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("帳號操作失敗: $e"), backgroundColor: Colors.red),
+        SnackBar(content: Text("帳號操作失敗：$e"), backgroundColor: Colors.redAccent),
       );
     } finally {
       if (mounted) setState(() => _isBusy = false);
@@ -60,13 +63,16 @@ class _AccountPageState extends State<AccountPage> {
       final result = await _cloudSyncService.syncPending();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message), backgroundColor: const Color(0xFF00B894)),
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFF00B894),
+        ),
       );
       await _refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("同步失敗: $e"), backgroundColor: Colors.red),
+        SnackBar(content: Text("同步失敗：$e"), backgroundColor: Colors.redAccent),
       );
     } finally {
       if (mounted) setState(() => _isBusy = false);
@@ -77,7 +83,10 @@ class _AccountPageState extends State<AccountPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("帳號與同步", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "帳號與雲端同步",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: FutureBuilder<CloudSyncState>(
         future: _stateFuture,
@@ -92,18 +101,20 @@ class _AccountPageState extends State<AccountPage> {
               _statusPanel(state),
               const SizedBox(height: 20),
               if (!state.isSignedIn) _authForm(state),
-              if (state.isSignedIn) _signedInPanel(state),
+              if (state.isSignedIn) _signedInPanel(),
               const SizedBox(height: 20),
               SizedBox(
                 height: 54,
                 child: ElevatedButton.icon(
                   onPressed: _isBusy ? null : _syncNow,
                   icon: const Icon(Icons.cloud_sync_rounded),
-                  label: const Text("立即同步"),
+                  label: const Text("立即同步本地資料"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00B894),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -120,23 +131,37 @@ class _AccountPageState extends State<AccountPage> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
-          Icon(state.isSignedIn ? Icons.verified_user_rounded : Icons.person_off_rounded, color: color, size: 34),
+          Icon(
+            state.isSignedIn
+                ? Icons.verified_user_rounded
+                : Icons.person_off_rounded,
+            color: color,
+            size: 34,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  state.isSignedIn ? "已登入" : (state.isConfigured ? "未登入" : "本地模式"),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  state.isSignedIn
+                      ? "已登入"
+                      : (state.isConfigured ? "尚未登入" : "本地模式"),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 6),
-                Text(state.email ?? state.message, style: const TextStyle(color: Colors.white60)),
+                Text(
+                  state.email ?? state.message,
+                  style: const TextStyle(color: Colors.white60),
+                ),
               ],
             ),
           ),
@@ -170,11 +195,11 @@ class _AccountPageState extends State<AccountPage> {
                 onPressed: !state.isConfigured || _isBusy
                     ? null
                     : () => _runAuth(
-                          () => _cloudSyncService.signIn(
-                            _emailController.text.trim(),
-                            _passwordController.text,
-                          ),
+                        () => _cloudSyncService.signIn(
+                          _emailController.text.trim(),
+                          _passwordController.text,
                         ),
+                      ),
                 icon: const Icon(Icons.login_rounded),
                 label: const Text("登入"),
               ),
@@ -185,11 +210,11 @@ class _AccountPageState extends State<AccountPage> {
                 onPressed: !state.isConfigured || _isBusy
                     ? null
                     : () => _runAuth(
-                          () => _cloudSyncService.signUp(
-                            _emailController.text.trim(),
-                            _passwordController.text,
-                          ),
+                        () => _cloudSyncService.signUp(
+                          _emailController.text.trim(),
+                          _passwordController.text,
                         ),
+                      ),
                 icon: const Icon(Icons.person_add_rounded),
                 label: const Text("註冊"),
                 style: ElevatedButton.styleFrom(
@@ -204,7 +229,7 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  Widget _signedInPanel(CloudSyncState state) {
+  Widget _signedInPanel() {
     return OutlinedButton.icon(
       onPressed: _isBusy ? null : () => _runAuth(_cloudSyncService.signOut),
       icon: const Icon(Icons.logout_rounded),
@@ -221,7 +246,10 @@ class _AccountPageState extends State<AccountPage> {
       labelStyle: const TextStyle(color: Color(0xFF00B894)),
       filled: true,
       fillColor: const Color(0xFF1A1A1A),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
       prefixIcon: Icon(icon, color: const Color(0xFF00B894)),
     );
   }

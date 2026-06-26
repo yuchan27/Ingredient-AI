@@ -18,7 +18,7 @@ class DBService {
     String path = join(await getDatabasesPath(), "health_history_v2.db");
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await _createHistoryTable(db);
         await _createFoodEntriesTable(db);
@@ -30,11 +30,17 @@ class DBService {
           await _createFoodEntriesTable(db);
           await _createUserProfileTable(db);
         }
+        if (oldVersion < 3) {
+          await _upgradeFoodEntriesForPlanning(db);
+        }
       },
     );
   }
 
-  Future<int> insertHistory(String imagePath, Map<String, dynamic> result) async {
+  Future<int> insertHistory(
+    String imagePath,
+    Map<String, dynamic> result,
+  ) async {
     var dbClient = await db;
     final now = DateTime.now().toUtc().toIso8601String();
     return await dbClient.insert("history", {
@@ -135,18 +141,14 @@ class DBService {
     String? authToken,
   }) async {
     var dbClient = await db;
-    await dbClient.insert(
-      "user_profile",
-      {
-        "id": 1,
-        "localUserId": localUserId,
-        "email": email,
-        "cloudUserId": cloudUserId,
-        "authToken": authToken,
-        "updatedAt": DateTime.now().toUtc().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await dbClient.insert("user_profile", {
+      "id": 1,
+      "localUserId": localUserId,
+      "email": email,
+      "cloudUserId": cloudUserId,
+      "authToken": authToken,
+      "updatedAt": DateTime.now().toUtc().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getUserProfile() async {
@@ -190,6 +192,8 @@ class DBService {
         sugar REAL NOT NULL,
         sodium REAL NOT NULL,
         fiber REAL NOT NULL,
+        cost REAL NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'TWD',
         healthScore INTEGER NOT NULL,
         notes TEXT,
         source TEXT NOT NULL,
@@ -225,6 +229,21 @@ class DBService {
     );
     await _addColumnIfMissing(db, "history", "updatedAt", "TEXT");
     await _addColumnIfMissing(db, "history", "deletedAt", "TEXT");
+  }
+
+  static Future<void> _upgradeFoodEntriesForPlanning(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      "food_entries",
+      "cost",
+      "REAL NOT NULL DEFAULT 0",
+    );
+    await _addColumnIfMissing(
+      db,
+      "food_entries",
+      "currency",
+      "TEXT NOT NULL DEFAULT 'TWD'",
+    );
   }
 
   static Future<void> _addColumnIfMissing(

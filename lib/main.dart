@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'views/account_page.dart';
 import 'views/analyzer_page.dart';
 import 'views/dashboard_page.dart';
@@ -9,7 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: ".env");
-  } catch (e) {
+  } catch (_) {
     debugPrint("Warning: .env file not found");
   }
   runApp(const HealthApp());
@@ -21,7 +22,7 @@ class HealthApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AI 原材料分析',
+      title: 'AI 飲食分析',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -48,11 +49,11 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final List<Widget> _pages = [
-    const AnalyzerPage(),
-    const DashboardPage(),
-    const HistoryPage(),
-    const AccountPage(),
+  final List<Widget> _pages = const [
+    AnalyzerPage(),
+    DashboardPage(),
+    HistoryPage(),
+    AccountPage(),
   ];
 
   @override
@@ -63,22 +64,23 @@ class _MainScreenState extends State<MainScreen> {
         elevation: 10,
         backgroundColor: const Color(0xFF1A1A1A),
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.psychology_outlined),
             selectedIcon: Icon(Icons.psychology, color: Color(0xFF00B894)),
-            label: 'AI 分析',
+            label: '分析',
           ),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights, color: Color(0xFF00B894)),
-            label: '營養分析',
+            label: '總覽',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_toggle_off),
             selectedIcon: Icon(Icons.history, color: Color(0xFF00B894)),
-            label: '掃描紀錄',
+            label: '紀錄',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),

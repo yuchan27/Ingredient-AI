@@ -110,7 +110,7 @@ app.post('/sync/food-entries', requireUser, async (req, res, next) => {
         INSERT INTO food_entries (
           user_id, local_id, food_name, consumed_at, meal_type, serving_size,
           serving_unit, calories, protein, carbs, fat, sugar, sodium, fiber,
-          health_score, notes, source, updated_at, deleted_at
+          cost, currency, health_score, notes, source, updated_at, deleted_at
         )
         VALUES (
           ${req.user.id},
@@ -127,6 +127,8 @@ app.post('/sync/food-entries', requireUser, async (req, res, next) => {
           ${numberValue(item.sugar, 0)},
           ${numberValue(item.sodium, 0)},
           ${numberValue(item.fiber, 0)},
+          ${numberValue(item.cost, 0)},
+          ${String(item.currency || 'TWD')},
           ${numberValue(item.healthScore || item.health_score, 0)},
           ${String(item.notes || '')},
           ${String(item.source || 'manual')},
@@ -147,6 +149,8 @@ app.post('/sync/food-entries', requireUser, async (req, res, next) => {
           sugar = EXCLUDED.sugar,
           sodium = EXCLUDED.sodium,
           fiber = EXCLUDED.fiber,
+          cost = EXCLUDED.cost,
+          currency = EXCLUDED.currency,
           health_score = EXCLUDED.health_score,
           notes = EXCLUDED.notes,
           source = EXCLUDED.source,

@@ -21,6 +21,8 @@ void main() {
         sugar: 11,
         sodium: 180,
         fiber: 8,
+        cost: 95,
+        currency: 'TWD',
         healthScore: 82,
         notes: 'Added banana',
         source: FoodEntrySource.ai,
@@ -44,6 +46,8 @@ void main() {
       expect(roundTrip.sugar, 11);
       expect(roundTrip.sodium, 180);
       expect(roundTrip.fiber, 8);
+      expect(roundTrip.cost, 95);
+      expect(roundTrip.currency, 'TWD');
       expect(roundTrip.healthScore, 82);
       expect(roundTrip.source, FoodEntrySource.ai);
       expect(roundTrip.isPendingSync, isTrue);
@@ -69,6 +73,7 @@ void main() {
         localId: 'generated-local-id',
         consumedAt: consumedAt,
         mealType: 'lunch',
+        cost: 120,
       );
 
       expect(entry.localId, 'generated-local-id');
@@ -77,6 +82,8 @@ void main() {
       expect(entry.mealType, 'lunch');
       expect(entry.calories, 430);
       expect(entry.protein, 35);
+      expect(entry.cost, 120);
+      expect(entry.currency, 'TWD');
       expect(entry.source, FoodEntrySource.ai);
       expect(entry.isPendingSync, isTrue);
     });

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS food_entries (
   sugar numeric NOT NULL DEFAULT 0,
   sodium numeric NOT NULL DEFAULT 0,
   fiber numeric NOT NULL DEFAULT 0,
+  cost numeric NOT NULL DEFAULT 0,
+  currency text NOT NULL DEFAULT 'TWD',
   health_score integer NOT NULL DEFAULT 0,
   notes text NOT NULL DEFAULT '',
   source text NOT NULL DEFAULT 'manual',

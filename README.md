@@ -1,36 +1,36 @@
-# AI 食品成分與營養分析 App
+# AI 飲食分析 App
 
-Flutter 期末專案：使用 Gemini 分析食品名稱或照片，產生健康分數、營養素、成分風險與飲食建議。專案已加入本地 SQLite 離線儲存、飲食日記、營養 Dashboard、語音輸入，以及 Neon Postgres 雲端同步架構。
+這是一個 Flutter 製作的 AI 飲食分析 App。使用者可以輸入食物名稱、拍攝餐點、上傳營養標示照片，讓 Gemini 分析熱量、營養成分、風險成分與建議。App 採本地優先設計，沒有網路時會先存入 SQLite；登入帳號且連上 Neon API 後，可將分析紀錄與飲食紀錄同步到 Neon Postgres。
 
-## 功能
+## 主要功能
 
-- AI 食品分析：輸入食品名稱或拍照，取得健康評分與營養分析。
-- 營養紀錄：自動把分析結果保存為飲食日記。
-- Dashboard：統計今日熱量、蛋白質、碳水、脂肪、糖、鈉、纖維與平均分數。
-- 掃描歷史：保存每次 AI 分析結果，並顯示待同步/已同步狀態。
-- 語音輸入：可用麥克風輸入產品名稱。
-- 離線可用：沒有網路時資料仍會寫入本地 SQLite。
-- Neon 雲端同步：透過 `server/` Node API 連接 Neon Postgres，避免在 App 中暴露資料庫密碼。
+- AI 圖片/文字飲食分析：支援餐點照片與包裝營養標示。
+- 飲食紀錄：保存餐別、日期、熱量、蛋白質、碳水、脂肪、糖、鈉、纖維。
+- 記帳功能：每筆飲食紀錄可記錄餐費，總覽會顯示每日花費。
+- 今日總分析：顯示每日熱量進度、剩餘熱量、營養素總量與近 7 日趨勢。
+- 飲食規劃系統：依今日熱量、鈉、纖維與蛋白質狀態，產生下一餐建議。
+- 語音輸入：可用語音輸入食物名稱。
+- 帳號與同步：Node API 連接 Neon Postgres，提供註冊、登入與資料同步。
 
-## Flutter App 執行
+## Flutter App 設定
 
-1. 建立 `.env`：
+在專案根目錄建立 `.env`：
 
 ```text
 GEMINI_API_KEY=your_gemini_api_key
 NEON_API_BASE_URL=http://10.0.2.2:8787
 ```
 
-`NEON_API_BASE_URL` 未設定時，App 會自動進入本地模式。
+`NEON_API_BASE_URL` 可不填；不填時 App 會以本地模式運作。Android emulator 要連到電腦本機 API 時，請使用 `http://10.0.2.2:<PORT>`。
 
-2. 安裝套件並執行：
+執行：
 
 ```powershell
 flutter pub get
 flutter run
 ```
 
-3. 建置 APK：
+建立 APK：
 
 ```powershell
 flutter build apk --debug
@@ -39,13 +39,13 @@ flutter build apk --release
 
 ## Neon Postgres API
 
-Flutter App 不直接連 Postgres；雲端同步走 `server/`：
+API 位於 `server/`，用來避免 Flutter App 直接暴露 Neon connection string。
 
 ```powershell
 npm install --prefix server
 ```
 
-複製 `server/.env.example` 成 `server/.env`：
+建立 `server/.env`：
 
 ```text
 DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require
@@ -53,7 +53,7 @@ JWT_SECRET=replace-with-a-long-random-secret
 PORT=8787
 ```
 
-先在 Neon SQL Editor 執行：
+在 Neon SQL Editor 或 CLI 套用：
 
 ```text
 neon/schema.sql
@@ -65,11 +65,7 @@ neon/schema.sql
 npm --prefix server run dev
 ```
 
-Android 模擬器連本機 API 時，`NEON_API_BASE_URL` 使用：
-
-```text
-http://10.0.2.2:8787
-```
+本專案實測 Neon project ID：`falling-brook-09062115`。
 
 ## 驗證命令
 
@@ -80,8 +76,8 @@ node --check server/src/index.js
 flutter build apk --release
 ```
 
-## 期末報告與素材
+## 繳交素材
 
 - Word 報告：`C11215139_medium_Flutter_final_report.docx`
 - App 截圖：`artifacts/screenshots/`
-- 操作影片：`artifacts/videos/ingredient_ai_demo.mp4`
+- 示範影片：`artifacts/videos/ingredient_ai_demo.mp4`

@@ -18,6 +18,8 @@ class FoodEntry {
   final double sugar;
   final double sodium;
   final double fiber;
+  final double cost;
+  final String currency;
   final int healthScore;
   final String notes;
   final FoodEntrySource source;
@@ -42,6 +44,8 @@ class FoodEntry {
     required this.sugar,
     required this.sodium,
     required this.fiber,
+    this.cost = 0,
+    this.currency = 'TWD',
     required this.healthScore,
     this.notes = '',
     required this.source,
@@ -59,6 +63,8 @@ class FoodEntry {
     double servingSize = 1,
     String servingUnit = 'serving',
     String notes = '',
+    double cost = 0,
+    String currency = 'TWD',
   }) {
     final now = DateTime.now().toUtc();
     return FoodEntry(
@@ -75,6 +81,8 @@ class FoodEntry {
       sugar: result.sugar,
       sodium: result.sodium,
       fiber: result.fiber,
+      cost: cost,
+      currency: currency,
       healthScore: result.healthScore,
       notes: notes,
       source: FoodEntrySource.ai,
@@ -93,7 +101,10 @@ class FoodEntry {
       consumedAt: _asDateTime(json['consumedAt'] ?? json['consumed_at']),
       mealType: _asString(json['mealType'] ?? json['meal_type'], 'meal'),
       servingSize: _asDouble(json['servingSize'] ?? json['serving_size'], 1),
-      servingUnit: _asString(json['servingUnit'] ?? json['serving_unit'], 'serving'),
+      servingUnit: _asString(
+        json['servingUnit'] ?? json['serving_unit'],
+        'serving',
+      ),
       calories: _asInt(json['calories']),
       protein: _asDouble(json['protein']),
       carbs: _asDouble(json['carbs']),
@@ -101,6 +112,8 @@ class FoodEntry {
       sugar: _asDouble(json['sugar']),
       sodium: _asDouble(json['sodium']),
       fiber: _asDouble(json['fiber']),
+      cost: _asDouble(json['cost']),
+      currency: _asString(json['currency'], 'TWD'),
       healthScore: _asInt(json['healthScore'] ?? json['health_score']),
       notes: _asString(json['notes'], ''),
       source: _asSource(json['source']),
@@ -131,6 +144,8 @@ class FoodEntry {
       'sugar': sugar,
       'sodium': sodium,
       'fiber': fiber,
+      'cost': cost,
+      'currency': currency,
       'healthScore': healthScore,
       'notes': notes,
       'source': source.name,
@@ -158,6 +173,8 @@ class FoodEntry {
       'sugar': sugar,
       'sodium': sodium,
       'fiber': fiber,
+      'cost': cost,
+      'currency': currency,
       'healthScore': healthScore,
       'notes': notes,
       'source': source.name,
@@ -184,6 +201,8 @@ class FoodEntry {
     double? sugar,
     double? sodium,
     double? fiber,
+    double? cost,
+    String? currency,
     int? healthScore,
     String? notes,
     FoodEntrySource? source,
@@ -208,6 +227,8 @@ class FoodEntry {
       sugar: sugar ?? this.sugar,
       sodium: sodium ?? this.sodium,
       fiber: fiber ?? this.fiber,
+      cost: cost ?? this.cost,
+      currency: currency ?? this.currency,
       healthScore: healthScore ?? this.healthScore,
       notes: notes ?? this.notes,
       source: source ?? this.source,
@@ -219,7 +240,11 @@ class FoodEntry {
   }
 
   FoodEntry markSynced(String cloudId) {
-    return copyWith(cloudId: cloudId, isPendingSync: false, updatedAt: DateTime.now().toUtc());
+    return copyWith(
+      cloudId: cloudId,
+      isPendingSync: false,
+      updatedAt: DateTime.now().toUtc(),
+    );
   }
 
   static String _asString(dynamic value, String fallback) {
@@ -237,7 +262,9 @@ class FoodEntry {
   static int _asInt(dynamic value, [int fallback = 0]) {
     if (value is int) return value;
     if (value is double) return value.round();
-    if (value is String) return (double.tryParse(value.trim()) ?? fallback).round();
+    if (value is String) {
+      return (double.tryParse(value.trim()) ?? fallback).round();
+    }
     return fallback;
   }
 

@@ -43,13 +43,8 @@ class CloudSyncState {
     required this.message,
   });
 
-  const CloudSyncState.localOnly([
-    String message = '尚未設定 Neon API，正在使用本地模式',
-  ]) : this(
-          isConfigured: false,
-          isSignedIn: false,
-          message: message,
-        );
+  const CloudSyncState.localOnly([String message = '尚未設定 Neon API，本機資料會先離線保存。'])
+    : this(isConfigured: false, isSignedIn: false, message: message);
 }
 
 class CloudSyncResult {
@@ -75,19 +70,18 @@ class CloudSyncService {
     DBService? dbService,
     http.Client? client,
     CloudSyncConfig Function()? configProvider,
-  })  : dbService = dbService ?? DBService(),
-        _client = client ?? http.Client(),
-        _configProvider = configProvider ??
-            (() => CloudSyncConfig.fromEnv(
-                  dotenv.env.map((key, value) => MapEntry(key, value)),
-                ));
+  }) : dbService = dbService ?? DBService(),
+       _client = client ?? http.Client(),
+       _configProvider =
+           configProvider ??
+           (() => CloudSyncConfig.fromEnv(
+             dotenv.env.map((key, value) => MapEntry(key, value)),
+           ));
 
   Future<CloudSyncState> initialize() async {
     final config = _configProvider();
     if (!config.isConfigured) {
-      return const CloudSyncState.localOnly(
-        '尚未設定 Neon API，資料會先保存在本地',
-      );
+      return const CloudSyncState.localOnly('尚未設定 Neon API，App 仍可用本地模式記錄與分析。');
     }
 
     final profile = await dbService.getUserProfile();
@@ -99,7 +93,7 @@ class CloudSyncService {
       isConfigured: true,
       isSignedIn: isSignedIn,
       email: email,
-      message: isSignedIn ? 'Neon 雲端同步已啟用' : 'Neon API 已設定，請登入帳號同步資料',
+      message: isSignedIn ? 'Neon 已登入並可同步。' : 'Neon API 已設定，請登入帳號啟用同步。',
     );
   }
 
@@ -129,17 +123,18 @@ class CloudSyncService {
         attempted: false,
         uploadedHistoryCount: 0,
         uploadedFoodEntryCount: 0,
-        message: '尚未設定 Neon API，資料已保存在本地',
+        message: '尚未設定 Neon API，資料已保存在本機。',
       );
     }
 
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
+    if (connectivity.isEmpty ||
+        connectivity.contains(ConnectivityResult.none)) {
       return const CloudSyncResult(
         attempted: false,
         uploadedHistoryCount: 0,
         uploadedFoodEntryCount: 0,
-        message: '目前離線，資料已保留在本地，恢復網路後可同步',
+        message: '目前離線，資料已保存在本機，連線後可同步。',
       );
     }
 
@@ -150,7 +145,7 @@ class CloudSyncService {
         attempted: false,
         uploadedHistoryCount: 0,
         uploadedFoodEntryCount: 0,
-        message: '請先登入 Neon 帳號再同步雲端',
+        message: '請先登入 Neon 帳號，再同步資料。',
       );
     }
 
@@ -159,14 +154,9 @@ class CloudSyncService {
 
     final pendingHistory = await dbService.getPendingHistory();
     if (pendingHistory.isNotEmpty) {
-      final response = await _postJson(
-        config,
-        '/sync/history',
-        authToken,
-        {
-          'items': pendingHistory.map(_historyPayload).toList(),
-        },
-      );
+      final response = await _postJson(config, '/sync/history', authToken, {
+        'items': pendingHistory.map(_historyPayload).toList(),
+      });
       final synced = response['synced'] as List<dynamic>? ?? const [];
       for (final item in synced) {
         if (item is! Map<String, dynamic>) continue;
@@ -185,9 +175,7 @@ class CloudSyncService {
         config,
         '/sync/food-entries',
         authToken,
-        {
-          'items': pendingFoodEntries.map((entry) => entry.toJson()).toList(),
-        },
+        {'items': pendingFoodEntries.map((entry) => entry.toJson()).toList()},
       );
       final synced = response['synced'] as List<dynamic>? ?? const [];
       for (final item in synced) {
@@ -205,7 +193,7 @@ class CloudSyncService {
       attempted: true,
       uploadedHistoryCount: historyCount,
       uploadedFoodEntryCount: foodEntryCount,
-      message: '已同步 $historyCount 筆分析紀錄、$foodEntryCount 筆飲食紀錄到 Neon',
+      message: '已同步 $historyCount 筆分析紀錄、$foodEntryCount 筆飲食紀錄到 Neon。',
     );
   }
 
@@ -216,9 +204,7 @@ class CloudSyncService {
   ) async {
     final config = _configProvider();
     if (!config.isConfigured) {
-      return const CloudSyncState.localOnly(
-        '尚未設定 Neon API，無法登入雲端帳號',
-      );
+      return const CloudSyncState.localOnly('尚未設定 Neon API，無法登入雲端帳號。');
     }
 
     final payload = await _postJson(config, path, null, {
@@ -229,7 +215,7 @@ class CloudSyncService {
     final token = payload['token']?.toString();
     final user = payload['user'];
     if (token == null || token.isEmpty || user is! Map<String, dynamic>) {
-      throw const FormatException('Neon API 登入回應缺少 token 或 user');
+      throw const FormatException('Neon API 回傳資料缺少 token 或 user。');
     }
 
     final cloudUserId = user['id']?.toString();

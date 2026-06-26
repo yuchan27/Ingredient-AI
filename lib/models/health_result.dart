@@ -35,7 +35,7 @@ class HealthResult {
 
   factory HealthResult.fromJson(Map<String, dynamic> json) {
     return HealthResult(
-      foodName: _asString(json['food_name'] ?? json['foodName'], '未命名產品'),
+      foodName: _asString(json['food_name'] ?? json['foodName'], '未命名食物'),
       healthyIngredients: _asStringList(
         json['healthy_ingredients'] ?? json['healthyIngredients'],
       ),

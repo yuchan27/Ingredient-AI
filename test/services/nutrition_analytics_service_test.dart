@@ -16,6 +16,7 @@ void main() {
           sugar: 8,
           sodium: 220,
           fiber: 4,
+          cost: 75,
           healthScore: 80,
         ),
         _entry(
@@ -28,6 +29,7 @@ void main() {
           sugar: 11,
           sodium: 710,
           fiber: 7,
+          cost: 130,
           healthScore: 70,
         ),
         _entry(
@@ -40,6 +42,7 @@ void main() {
           sugar: 9,
           sodium: 500,
           fiber: 6,
+          cost: 90,
           healthScore: 90,
         ),
       ];
@@ -58,6 +61,7 @@ void main() {
       expect(today.totalSugar, 19);
       expect(today.totalSodium, 930);
       expect(today.totalFiber, 11);
+      expect(today.totalCost, 205);
       expect(today.averageHealthScore, 75);
     });
   });
@@ -73,6 +77,7 @@ FoodEntry _entry({
   required double sugar,
   required double sodium,
   required double fiber,
+  double cost = 0,
   required int healthScore,
 }) {
   return FoodEntry(
@@ -89,6 +94,7 @@ FoodEntry _entry({
     sugar: sugar,
     sodium: sodium,
     fiber: fiber,
+    cost: cost,
     healthScore: healthScore,
     source: FoodEntrySource.manual,
     isPendingSync: true,
