@@ -9,7 +9,7 @@
 - 正式顯示名稱：`食伴 AI`
 - 英文／內部沿用名稱：`FoodLens AI`
 - 品牌副標：`懂你每一餐`
-- Android launcher、iOS display name、Web manifest 與 Flutter application title 統一顯示 `食伴 AI`。
+- Android launcher、Web manifest、Windows 視窗與 Flutter application title 統一顯示 `食伴 AI`。
 - App 登入頁與首頁主標題顯示 `食伴 AI`，登入頁副標改為 `懂你每一餐`。
 
 `FoodLens` 已有多個同類飲食辨識產品使用；新顯示名稱以中文區隔，同時保留既有程式套件與後端識別，避免不必要的遷移風險。
@@ -38,7 +38,6 @@
 
 - 建立單一 1024×1024 品牌母圖。
 - 產生 Android legacy mipmap 尺寸與 adaptive icon foreground/background 資源。
-- 更新 iOS `AppIcon.appiconset` 全部既有尺寸。
 - 更新 Web favicon、192/512 與 maskable icon。
 - 更新 Windows `app_icon.ico`，避免桌面建置仍顯示 Flutter 預設圖示。
 - 更新 Android、iOS、Web 與 Flutter 內部顯示名稱。
