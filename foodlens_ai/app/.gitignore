@@ -3,7 +3,6 @@
 *.log
 *.pyc
 *.swp
-node_modules/
 .DS_Store
 .atom/
 .build/
@@ -18,6 +17,11 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -35,23 +39,15 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio artifacts
+# Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Environment variables (Sensitive Data)
-.env
-
-# Local release and report deliverables
-/artifacts/
-/docs/demo/
-/docs/screenshots/
-/Gemini_Generated_Image*.png
-/*.docx
-/*.mp4
-
-# Generated report previews
-**/report_render*/
-/foodlens_ai/docs/build_final_report.py
-/foodlens_ai/docs/screenshots/firebase-*.png
+# Local Firebase/Dart define configuration
+firebase.dev.json
+test-account.local.json
+emulator-registration.local.json
+/android/app/google-services.json
+/android/key.properties
+/android/app/*.jks
