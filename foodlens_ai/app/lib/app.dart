@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'brand/brand_identity.dart';
 import 'config/api_config.dart';
 import 'config/api_endpoint_store.dart';
 import 'repositories/food_repository.dart';
@@ -31,7 +32,7 @@ class FoodLensApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'FoodLens AI',
+      title: BrandIdentity.name,
       theme: buildAppTheme(),
       home: switch (mode) {
         AppMode.demo => DashboardShell(
@@ -57,7 +58,7 @@ class _SetupRequiredScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('FoodLens AI')),
+      appBar: AppBar(title: const Text(BrandIdentity.name)),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
@@ -232,14 +233,16 @@ class _AuthScreenState extends State<_AuthScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'FoodLens AI',
+                      BrandIdentity.name,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _registering ? '建立帳號並開始記錄飲食' : '登入你的飲食分析空間',
+                      _registering
+                          ? '建立帳號並開始記錄飲食'
+                          : BrandIdentity.tagline,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 28),

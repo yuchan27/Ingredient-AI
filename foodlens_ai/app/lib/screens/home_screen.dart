@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../brand/brand_identity.dart';
 import '../models/food_record.dart';
 import '../models/nutrition_summary.dart';
 import '../repositories/food_repository.dart';
@@ -30,7 +31,10 @@ class HomeScreen extends StatelessWidget {
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('FoodLens AI', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              BrandIdentity.name,
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             Text(
               '今日飲食',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),

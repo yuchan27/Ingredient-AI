@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../brand/brand_identity.dart';
 import '../config/api_endpoint_store.dart';
 import '../repositories/food_repository.dart';
 
@@ -231,7 +232,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'FoodLens AI 1.0.0',
+          BrandIdentity.versionLabel,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
