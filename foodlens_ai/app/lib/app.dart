@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'brand/brand_identity.dart';
+import 'brand/brand_mark.dart';
 import 'config/api_config.dart';
 import 'config/api_endpoint_store.dart';
 import 'repositories/food_repository.dart';
@@ -226,11 +227,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.food_bank_outlined,
-                      size: 56,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    const Center(child: BrandMark()),
                     const SizedBox(height: 16),
                     Text(
                       BrandIdentity.name,
@@ -240,9 +237,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _registering
-                          ? '建立帳號並開始記錄飲食'
-                          : BrandIdentity.tagline,
+                      _registering ? '建立帳號並開始記錄飲食' : BrandIdentity.tagline,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 28),

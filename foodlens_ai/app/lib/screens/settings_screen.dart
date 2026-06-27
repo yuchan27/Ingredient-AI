@@ -57,10 +57,7 @@ class SettingsScreen extends StatelessWidget {
           FilledButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
-                Navigator.pop(
-                  context,
-                  normalizeApiEndpoint(controller.text),
-                );
+                Navigator.pop(context, normalizeApiEndpoint(controller.text));
               }
             },
             child: const Text('儲存'),
@@ -72,9 +69,9 @@ class SettingsScreen extends StatelessWidget {
     if (value == null || onApiBaseUrlChanged == null) return;
     await onApiBaseUrlChanged!(value);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API 主機已更新。')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('API 主機已更新。')));
     }
   }
 

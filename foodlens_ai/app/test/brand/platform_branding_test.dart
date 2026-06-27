@@ -30,9 +30,6 @@ void main() {
     final windowsResources = File(
       'windows/runner/Runner.rc',
     ).readAsStringSync();
-    expect(
-      windowsResources,
-      contains('VALUE "ProductName", "食伴 AI"'),
-    );
+    expect(windowsResources, contains('VALUE "ProductName", "食伴 AI"'));
   });
 }
