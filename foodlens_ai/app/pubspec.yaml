@@ -1,5 +1,5 @@
 name: foodlens_ai_app
-description: "FoodLens AI local-first nutrition analysis application."
+description: "食伴 AI local-first nutrition analysis application."
 publish_to: 'none'
 
 # The following defines the version and build number for your application.
