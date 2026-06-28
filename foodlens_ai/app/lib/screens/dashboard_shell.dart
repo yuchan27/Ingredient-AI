@@ -15,6 +15,7 @@ class DashboardShell extends StatefulWidget {
     required this.api,
     required this.accountEmail,
     required this.isDemo,
+    this.isLocalOnly = false,
     required this.tokenProvider,
     this.onApiBaseUrlChanged,
     this.onLogout,
@@ -24,6 +25,7 @@ class DashboardShell extends StatefulWidget {
   final FoodAnalysisApi api;
   final String accountEmail;
   final bool isDemo;
+  final bool isLocalOnly;
   final TokenProvider tokenProvider;
   final Future<void> Function(String value)? onApiBaseUrlChanged;
   final Future<void> Function()? onLogout;
@@ -43,12 +45,14 @@ class _DashboardShellState extends State<DashboardShell> {
         api: widget.api,
         tokenProvider: widget.tokenProvider,
         isDemo: widget.isDemo,
+        isLocalOnly: widget.isLocalOnly,
       ),
       InsightsScreen(repository: widget.repository),
       SettingsScreen(
         repository: widget.repository,
         accountEmail: widget.accountEmail,
         isDemo: widget.isDemo,
+        isLocalOnly: widget.isLocalOnly,
         apiBaseUrl: widget.api.baseUrl,
         onApiBaseUrlChanged: widget.onApiBaseUrlChanged,
         onLogout: widget.onLogout,

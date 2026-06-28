@@ -17,12 +17,14 @@ class HomeScreen extends StatelessWidget {
     required this.api,
     required this.tokenProvider,
     required this.isDemo,
+    this.isLocalOnly = false,
   });
 
   final FoodRepository repository;
   final FoodAnalysisApi api;
   final TokenProvider tokenProvider;
   final bool isDemo;
+  final bool isLocalOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,9 @@ class HomeScreen extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Tooltip(
-                  message: offline ? '離線，變更將等待同步' : '已連線',
+                  message: isLocalOnly
+                      ? (offline ? '離線，本機紀錄仍可使用' : '本機模式')
+                      : (offline ? '離線，變更將等待同步' : '已連線'),
                   child: Icon(
                     offline
                         ? Icons.cloud_off_outlined

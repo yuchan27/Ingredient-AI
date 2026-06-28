@@ -10,6 +10,7 @@ class SettingsScreen extends StatelessWidget {
     required this.repository,
     required this.accountEmail,
     required this.isDemo,
+    this.isLocalOnly = false,
     required this.apiBaseUrl,
     this.onApiBaseUrlChanged,
     this.onLogout,
@@ -18,6 +19,7 @@ class SettingsScreen extends StatelessWidget {
   final FoodRepository repository;
   final String accountEmail;
   final bool isDemo;
+  final bool isLocalOnly;
   final String apiBaseUrl;
   final Future<void> Function(String value)? onApiBaseUrlChanged;
   final Future<void> Function()? onLogout;
@@ -157,12 +159,18 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                 title: Text(accountEmail),
-                subtitle: Text(isDemo ? '展示模式，資料只在本次執行中' : 'Email 已驗證'),
+                subtitle: Text(
+                  isDemo
+                      ? '展示模式，資料只在本次執行中'
+                      : isLocalOnly
+                      ? '資料只保存在這台裝置，不跨裝置同步'
+                      : 'Email 已驗證，資料可跨裝置同步',
+                ),
               ),
               if (onLogout != null)
                 ListTile(
                   leading: const Icon(Icons.logout),
-                  title: const Text('登出'),
+                  title: Text(isLocalOnly ? '註冊或登入以啟用同步' : '登出'),
                   onTap: onLogout,
                 ),
             ],
@@ -179,10 +187,14 @@ class SettingsScreen extends StatelessWidget {
         Card(
           child: Column(
             children: [
-              const ListTile(
-                leading: Icon(Icons.offline_bolt_outlined),
-                title: Text('離線可用'),
-                subtitle: Text('Firestore 會快取資料，連線後自動同步待上傳變更。'),
+              ListTile(
+                leading: const Icon(Icons.offline_bolt_outlined),
+                title: const Text('離線可用'),
+                subtitle: Text(
+                  isLocalOnly
+                      ? '紀錄保存在本機；登入後的新紀錄才會同步到雲端。'
+                      : 'Firestore 會快取資料，連線後自動同步待上傳變更。',
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.dns_outlined),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'auth/auth_action_state.dart';
 import 'brand/brand_identity.dart';
 import 'brand/brand_mark.dart';
 import 'config/api_config.dart';
@@ -106,8 +107,19 @@ class _AuthGate extends StatelessWidget {
           );
         }
         final user = snapshot.data;
-        if (user == null) return const _AuthScreen();
-        if (!user.emailVerified) return _VerifyEmailScreen(user: user);
+        if (user == null) return const AuthScreen();
+        if (user.isAnonymous) return _LocalDashboard(user: user);
+        if (!user.emailVerified) {
+          return VerifyEmailScreen(
+            email: user.email ?? '',
+            onRefresh: () async {
+              await user.reload();
+              await FirebaseAuth.instance.currentUser?.getIdToken(true);
+            },
+            onResend: user.sendEmailVerification,
+            onSignOut: FirebaseAuth.instance.signOut,
+          );
+        }
         return _AuthenticatedDashboard(user: user);
       },
     );
@@ -164,20 +176,81 @@ class _AuthenticatedDashboardState extends State<_AuthenticatedDashboard> {
   );
 }
 
-class _AuthScreen extends StatefulWidget {
-  const _AuthScreen();
+class _LocalDashboard extends StatefulWidget {
+  const _LocalDashboard({required this.user});
+  final User user;
 
   @override
-  State<_AuthScreen> createState() => _AuthScreenState();
+  State<_LocalDashboard> createState() => _LocalDashboardState();
 }
 
-class _AuthScreenState extends State<_AuthScreen> {
+class _LocalDashboardState extends State<_LocalDashboard> {
+  late final LocalFoodRepository repository;
+  late FoodAnalysisApi api;
+  final _endpointStore = ApiEndpointStore();
+
+  @override
+  void initState() {
+    super.initState();
+    repository = LocalFoodRepository();
+    api = FoodAnalysisApi(baseUrl: apiBaseUrl);
+    unawaited(_loadApiEndpoint());
+  }
+
+  Future<void> _loadApiEndpoint() async {
+    final savedUrl = await _endpointStore.load(fallback: apiBaseUrl);
+    if (mounted && savedUrl != api.baseUrl) {
+      setState(() => api = FoodAnalysisApi(baseUrl: savedUrl));
+    }
+  }
+
+  Future<void> _updateApiEndpoint(String value) async {
+    await _endpointStore.save(value);
+    if (mounted) {
+      setState(
+        () => api = FoodAnalysisApi(baseUrl: normalizeApiEndpoint(value)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => DashboardShell(
+    repository: repository,
+    api: api,
+    accountEmail: '本機模式',
+    isDemo: false,
+    isLocalOnly: true,
+    tokenProvider: () async => (await widget.user.getIdToken(true)) ?? '',
+    onApiBaseUrlChanged: _updateApiEndpoint,
+    onLogout: () => FirebaseAuth.instance.signOut(),
+  );
+}
+
+typedef AuthCredentialAction =
+    Future<void> Function(String email, String password);
+
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({
+    super.key,
+    this.onSignIn,
+    this.onRegister,
+    this.onContinueLocally,
+  });
+
+  final AuthCredentialAction? onSignIn;
+  final AuthCredentialAction? onRegister;
+  final Future<void> Function()? onContinueLocally;
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _registering = false;
-  bool _loading = false;
-  String? _error;
+  AuthActionState _action = const AuthActionState.idle();
 
   @override
   void dispose() {
@@ -189,27 +262,82 @@ class _AuthScreenState extends State<_AuthScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
-      _loading = true;
-      _error = null;
+      _action = AuthActionState.loading(_registering ? '正在建立帳號…' : '正在登入…');
     });
     try {
       if (_registering) {
-        final credential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-              email: _email.text.trim(),
-              password: _password.text,
+        if (widget.onRegister != null) {
+          await widget.onRegister!(_email.text.trim(), _password.text);
+        } else {
+          final credential = await FirebaseAuth.instance
+              .createUserWithEmailAndPassword(
+                email: _email.text.trim(),
+                password: _password.text,
+              );
+          if (mounted) {
+            setState(
+              () => _action = const AuthActionState.loading('帳號已建立，正在寄送驗證信…'),
             );
-        await credential.user?.sendEmailVerification();
+          }
+          await credential.user?.sendEmailVerification();
+        }
+        if (mounted) {
+          setState(
+            () =>
+                _action = const AuthActionState.success('帳號已建立，請完成 Email 驗證。'),
+          );
+        }
       } else {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _email.text.trim(),
-          password: _password.text,
-        );
+        if (widget.onSignIn != null) {
+          await widget.onSignIn!(_email.text.trim(), _password.text);
+        } else {
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: _email.text.trim(),
+            password: _password.text,
+          );
+        }
+        if (mounted) {
+          setState(() => _action = const AuthActionState.success('登入成功。'));
+        }
       }
     } on FirebaseAuthException catch (error) {
-      setState(() => _error = _authMessage(error.code));
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(
+          () => _action = AuthActionState.error(_authMessage(error.code)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _action = const AuthActionState.error('無法完成操作，請稍後再試。'));
+      }
+    }
+  }
+
+  Future<void> _continueLocally() async {
+    setState(() {
+      _action = const AuthActionState.loading('正在啟用本機模式…');
+    });
+    try {
+      if (widget.onContinueLocally != null) {
+        await widget.onContinueLocally!();
+      } else {
+        await FirebaseAuth.instance.signInAnonymously();
+      }
+      if (mounted) {
+        setState(() => _action = const AuthActionState.success('本機模式已啟用。'));
+      }
+    } on FirebaseAuthException catch (error) {
+      if (mounted) {
+        setState(
+          () => _action = AuthActionState.error(_authMessage(error.code)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _action = const AuthActionState.error('無法啟用本機模式，請稍後再試。'),
+        );
+      }
     }
   }
 
@@ -265,19 +393,30 @@ class _AuthScreenState extends State<_AuthScreen> {
                       validator: (value) =>
                           (value?.length ?? 0) >= 6 ? null : '密碼至少 6 個字元',
                     ),
-                    if (_error != null) ...[
+                    if (_action.isError) ...[
                       const SizedBox(height: 12),
                       Text(
-                        _error!,
+                        _action.message!,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ],
+                    if (_action.message != null && !_action.isError) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _action.message!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     FilledButton.icon(
-                      onPressed: _loading ? null : _submit,
-                      icon: _loading
+                      onPressed: _action.isLoading ? null : _submit,
+                      icon: _action.isLoading && _action.message != '正在啟用本機模式…'
                           ? const SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
@@ -290,10 +429,27 @@ class _AuthScreenState extends State<_AuthScreen> {
                       label: Text(_registering ? '註冊帳號' : '登入'),
                     ),
                     TextButton(
-                      onPressed: _loading
+                      onPressed: _action.isLoading
                           ? null
                           : () => setState(() => _registering = !_registering),
                       child: Text(_registering ? '已有帳號？回登入' : '還沒有帳號？免費註冊'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _action.isLoading ? null : _continueLocally,
+                      icon: _action.isLoading && _action.message == '正在啟用本機模式…'
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.phone_android_outlined),
+                      label: const Text('先用本機模式'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '不需要帳號，紀錄只保存在這台裝置，不跨裝置同步。AI 圖片分析每日 5 次。',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -311,25 +467,115 @@ String _authMessage(String code) => switch (code) {
   'invalid-credential' => 'Email 或密碼錯誤。',
   'weak-password' => '密碼強度不足。',
   'network-request-failed' => '網路連線失敗，請稍後再試。',
+  'operation-not-allowed' => '此登入方式尚未啟用，請稍後再試。',
+  'too-many-requests' => '操作過於頻繁，請稍後再試。',
   _ => '無法完成操作，請檢查資料後再試。',
 };
 
-class _VerifyEmailScreen extends StatefulWidget {
-  const _VerifyEmailScreen({required this.user});
-  final User user;
+class VerifyEmailScreen extends StatefulWidget {
+  const VerifyEmailScreen({
+    super.key,
+    required this.email,
+    required this.onRefresh,
+    required this.onResend,
+    required this.onSignOut,
+    this.resendCooldown = const Duration(seconds: 30),
+  });
+
+  final String email;
+  final Future<void> Function() onRefresh;
+  final Future<void> Function() onResend;
+  final Future<void> Function() onSignOut;
+  final Duration resendCooldown;
 
   @override
-  State<_VerifyEmailScreen> createState() => _VerifyEmailScreenState();
+  State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
-class _VerifyEmailScreenState extends State<_VerifyEmailScreen> {
-  bool _busy = false;
+enum _VerificationAction { refresh, resend }
+
+class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
+  AuthActionState _action = const AuthActionState.idle();
+  _VerificationAction? _activeAction;
+  Timer? _cooldownTimer;
+  int _cooldownSeconds = 0;
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<bool> _runAction({
+    required _VerificationAction action,
+    required String loadingMessage,
+    required String successMessage,
+    required String failureMessage,
+    required Future<void> Function() operation,
+  }) async {
+    setState(() {
+      _activeAction = action;
+      _action = AuthActionState.loading(loadingMessage);
+    });
+    try {
+      await operation();
+      if (!mounted) return false;
+      setState(() => _action = AuthActionState.success(successMessage));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
+      return true;
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return false;
+      final message = _authMessage(error.code);
+      setState(() => _action = AuthActionState.error(message));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return false;
+    } catch (_) {
+      if (!mounted) return false;
+      setState(() => _action = AuthActionState.error(failureMessage));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failureMessage)));
+      return false;
+    }
+  }
 
   Future<void> _refresh() async {
-    setState(() => _busy = true);
-    await widget.user.reload();
-    await FirebaseAuth.instance.currentUser?.getIdToken(true);
-    if (mounted) setState(() => _busy = false);
+    await _runAction(
+      action: _VerificationAction.refresh,
+      loadingMessage: '正在更新驗證狀態…',
+      successMessage: '驗證狀態已更新。',
+      failureMessage: '無法更新驗證狀態，請稍後再試。',
+      operation: widget.onRefresh,
+    );
+  }
+
+  Future<void> _resend() async {
+    final succeeded = await _runAction(
+      action: _VerificationAction.resend,
+      loadingMessage: '正在重寄驗證信…',
+      successMessage: '驗證信已重新寄出，請檢查收件匣。',
+      failureMessage: '無法重寄驗證信，請稍後再試。',
+      operation: widget.onResend,
+    );
+    if (succeeded) _startCooldown();
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownSeconds = widget.resendCooldown.inSeconds);
+    if (_cooldownSeconds <= 0) return;
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _cooldownSeconds--);
+      if (_cooldownSeconds <= 0) timer.cancel();
+    });
   }
 
   @override
@@ -338,7 +584,7 @@ class _VerifyEmailScreenState extends State<_VerifyEmailScreen> {
       actions: [
         IconButton(
           tooltip: '登出',
-          onPressed: () => FirebaseAuth.instance.signOut(),
+          onPressed: _action.isLoading ? null : widget.onSignOut,
           icon: const Icon(Icons.logout),
         ),
       ],
@@ -363,19 +609,52 @@ class _VerifyEmailScreenState extends State<_VerifyEmailScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                '驗證信已寄到 ${widget.user.email ?? ''}。完成後回來更新狀態。',
+                '驗證信已寄到 ${widget.email}。完成後回來更新狀態。',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: _busy ? null : _refresh,
-                icon: const Icon(Icons.refresh),
+                onPressed: _action.isLoading ? null : _refresh,
+                icon:
+                    _action.isLoading &&
+                        _activeAction == _VerificationAction.refresh
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
                 label: const Text('我已完成驗證'),
               ),
               TextButton(
-                onPressed: () => widget.user.sendEmailVerification(),
-                child: const Text('重寄驗證信'),
+                onPressed: _action.isLoading || _cooldownSeconds > 0
+                    ? null
+                    : _resend,
+                child:
+                    _action.isLoading &&
+                        _activeAction == _VerificationAction.resend
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        _cooldownSeconds > 0
+                            ? '請等候 $_cooldownSeconds 秒再重寄'
+                            : '重寄驗證信',
+                      ),
               ),
+              if (_action.message != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _action.message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _action.isError
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
