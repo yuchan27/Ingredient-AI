@@ -23,12 +23,16 @@ const app = createApp({
   quota,
 });
 
-const server = app.listen(config.port, '0.0.0.0', () => {
-  console.log(`FoodLens AI server listening on port ${config.port}`);
-});
+if (!process.env.VERCEL) {
+  const server = app.listen(config.port, '0.0.0.0', () => {
+    console.log(`FoodLens AI server listening on port ${config.port}`);
+  });
 
-server.requestTimeout = 30_000;
-server.headersTimeout = 35_000;
-server.on('error', (error) => {
-  console.error('Server error:', error?.name || 'Error');
-});
+  server.requestTimeout = 30_000;
+  server.headersTimeout = 35_000;
+  server.on('error', (error) => {
+    console.error('Server error:', error?.name || 'Error');
+  });
+}
+
+module.exports = app;

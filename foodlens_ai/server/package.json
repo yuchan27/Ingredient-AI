@@ -11,7 +11,7 @@
     "check": "node --check src/index.js && node --check src/app.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "dependencies": {
     "@google/genai": "2.10.0",
@@ -19,7 +19,7 @@
     "dotenv": "17.4.2",
     "express": "5.2.1",
     "express-rate-limit": "8.5.2",
-    "firebase-admin": "14.1.0",
+    "firebase-admin": "13.6.0",
     "helmet": "8.2.0",
     "multer": "^2.2.0",
     "nodemailer": "9.0.1",

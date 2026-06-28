@@ -73,6 +73,8 @@ App 的註冊使用 Firebase Authentication。建立帳號後會呼叫 `sendEmai
 
 登入頁的「先用本機模式」會執行 Firebase 匿名登入以取得 API token，但飲食紀錄只存放在該裝置的 `LocalFoodRepository`，不寫入 Firestore 且不跨裝置同步。匿名使用者每日可做 5 次 AI 圖片分析；已完成 Email 驗證的帳號每日 50 次，兩者都由後端依 UTC 日期強制執行。
 
+驗證信由 Firebase 雲端寄送，與開發電腦或 Node server 是否開機無關。正式環境不公開 `/sendTestEmail`。
+
 ## 6. 離線與自動同步
 
 已驗證帳號使用 Firestore 持久快取。已讀取紀錄可在斷網時瀏覽，新增/修改/刪除會先寫入本機佇列，重新連線後自動同步。匿名本機模式不使用 Firestore，紀錄只保存在該裝置。圖片保存在 App 文件目錄，同一裝置可離線顯示；已驗證帳號的營養、日期、餐別、金額與備註會同步到 Firestore。圖片 AI 分析需要網路；失敗時仍可手動填寫營養資料，Gemini 失敗不會消耗每日額度。
@@ -84,7 +86,7 @@ ngrok http 3000
 flutter run --dart-define-from-file=firebase.dev.json --dart-define=API_BASE_URL=https://YOUR-NGROK-DOMAIN
 ```
 
-實機不能使用 `10.0.2.2`。請改為 HTTPS ngrok URL 或 Cloud Run URL。
+實機不能使用 `10.0.2.2`。目前正式免費 API 為 `https://food-companion-api.vercel.app`；也可使用 ngrok 或未來的 Cloud Run URL。
 登入後也可在 App 的「設定 > API 主機」直接更新網址，不需要重新安裝 APK。
 
 ## 8. Android release 簽章與 APK
@@ -111,8 +113,8 @@ cd C:\Users\wuwu6\StudioProjects\App_medium\foodlens_ai\app
 flutter build apk --release --dart-define-from-file=firebase.release.json
 ```
 
-`firebase.release.json` 必須包含 `FIREBASE_API_KEY`、`FIREBASE_APP_ID`、`FIREBASE_MESSAGING_SENDER_ID`、`FIREBASE_PROJECT_ID`、選用的 `FIREBASE_STORAGE_BUCKET`，以及 Cloud Run HTTPS `API_BASE_URL`；不要設定 `DEMO_MODE=true`。完整範例與雲端驗證步驟見 `docs/deploy-cloud-run.md`。
+`firebase.release.json` 必須包含 `FIREBASE_API_KEY`、`FIREBASE_APP_ID`、`FIREBASE_MESSAGING_SENDER_ID`、`FIREBASE_PROJECT_ID`、選用的 `FIREBASE_STORAGE_BUCKET`，以及 `API_BASE_URL=https://food-companion-api.vercel.app`；不要設定 `DEMO_MODE=true`。目前正式部署與驗證步驟見 `docs/deploy-vercel.md`，Cloud Run 則保留作未來替代方案。
 
 輸出檔案位於 `app/build/app/outputs/flutter-apk/app-release.apk`。正式測試版也可直接從
-[GitHub Release v1.0.0](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.0/FoodLens-AI-v1.0.0.apk)
-下載；安裝後先完成 Email 驗證。正式建置應已內含 Cloud Run HTTPS URL；「設定 > API 主機」只作診斷覆寫。
+[GitHub Releases](https://github.com/yuchan27/Ingredient-AI/releases)
+下載；安裝後先完成 Email 驗證。正式建置應已內含 Vercel HTTPS URL；「設定 > API 主機」只作診斷覆寫。
