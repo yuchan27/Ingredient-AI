@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/food_record.dart';
@@ -163,6 +165,111 @@ class MemoryFoodRepository implements FoodRepository {
   Future<void> delete(FoodRecord record) async {
     _records.removeWhere((item) => item.id == record.id);
     _emit();
+  }
+
+  @override
+  Future<void> submitFeedback({
+    required String category,
+    required String message,
+  }) async {}
+}
+
+class LocalFoodRepository implements FoodRepository {
+  LocalFoodRepository({
+    SharedPreferences? preferences,
+    LocalImageStore? localImages,
+  }) : _preferences = preferences,
+       _localImages = localImages ?? LocalImageStore();
+
+  static const _recordsKey = 'local_food_records_v1';
+  final SharedPreferences? _preferences;
+  final LocalImageStore _localImages;
+  final List<FoodRecord> _records = [];
+  final _changes = StreamController<List<FoodRecord>>.broadcast();
+  final _uuid = const Uuid();
+  bool _loaded = false;
+
+  Future<SharedPreferences> get _prefs async =>
+      _preferences ?? await SharedPreferences.getInstance();
+
+  Future<void> _load() async {
+    if (_loaded) return;
+    final encoded = (await _prefs).getString(_recordsKey);
+    if (encoded != null) {
+      final decoded = jsonDecode(encoded);
+      if (decoded is List) {
+        _records.addAll(
+          decoded.whereType<Map>().map(
+            (value) => FoodRecord.fromMap(
+              '${value['id'] ?? ''}',
+              Map<String, dynamic>.from(value),
+            ),
+          ),
+        );
+      }
+    }
+    _loaded = true;
+  }
+
+  List<FoodRecord> _sorted() =>
+      [..._records]..sort((a, b) => b.eatenAt.compareTo(a.eatenAt));
+
+  Future<void> _persist() async {
+    final values = _records
+        .map(
+          (record) => {
+            'id': record.id,
+            ...record.toMap(),
+            'eatenAt': record.eatenAt.toIso8601String(),
+            'createdAt': record.createdAt.toIso8601String(),
+            'updatedAt': record.updatedAt.toIso8601String(),
+          },
+        )
+        .toList();
+    final saved = await (await _prefs).setString(
+      _recordsKey,
+      jsonEncode(values),
+    );
+    if (!saved) throw StateError('Could not save local food records.');
+    _changes.add(List.unmodifiable(_sorted()));
+  }
+
+  @override
+  Stream<List<FoodRecord>> watchRecords() async* {
+    await _load();
+    yield List.unmodifiable(_sorted());
+    yield* _changes.stream;
+  }
+
+  @override
+  String createRecordId() => _uuid.v4();
+
+  @override
+  Future<UploadedFoodImage> uploadImage(String recordId, XFile image) async {
+    final path = await _localImages.save(
+      uid: 'local',
+      recordId: recordId,
+      image: image,
+    );
+    return UploadedFoodImage(path: path, url: path);
+  }
+
+  @override
+  Future<void> save(FoodRecord record) async {
+    await _load();
+    _records.removeWhere((item) => item.id == record.id);
+    _records.add(record);
+    await _persist();
+  }
+
+  @override
+  Future<void> delete(FoodRecord record) async {
+    await _load();
+    _records.removeWhere((item) => item.id == record.id);
+    if (record.imagePath.isNotEmpty) {
+      await _localImages.delete(record.imagePath);
+    }
+    await _persist();
   }
 
   @override

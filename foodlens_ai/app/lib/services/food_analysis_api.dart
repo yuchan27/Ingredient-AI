@@ -13,6 +13,7 @@ class FoodAnalysisResult {
     required this.carbs,
     required this.confidence,
     required this.notes,
+    this.quota,
   });
 
   factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) =>
@@ -24,6 +25,9 @@ class FoodAnalysisResult {
         carbs: _number(json['carbs']),
         confidence: _number(json['confidence']),
         notes: '${json['notes'] ?? ''}',
+        quota: json['quota'] is Map<String, dynamic>
+            ? AiQuota.fromJson(json['quota'] as Map<String, dynamic>)
+            : null,
       );
 
   final String foodName;
@@ -33,14 +37,34 @@ class FoodAnalysisResult {
   final double carbs;
   final double confidence;
   final String notes;
+  final AiQuota? quota;
+}
+
+class AiQuota {
+  const AiQuota({
+    required this.limit,
+    required this.used,
+    required this.remaining,
+  });
+
+  factory AiQuota.fromJson(Map<String, dynamic> json) => AiQuota(
+    limit: _number(json['limit']).toInt(),
+    used: _number(json['used']).toInt(),
+    remaining: _number(json['remaining']).toInt(),
+  );
+
+  final int limit;
+  final int used;
+  final int remaining;
 }
 
 double _number(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 
 class FoodAnalysisException implements Exception {
-  const FoodAnalysisException(this.message);
+  const FoodAnalysisException(this.message, {this.quota});
   final String message;
+  final AiQuota? quota;
   @override
   String toString() => message;
 }
@@ -74,6 +98,17 @@ class FoodAnalysisApi {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
+      if (response.statusCode == 429) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          throw FoodAnalysisException(
+            '${decoded['error'] ?? '今天的 AI 次數已用完，請明天再試。'}',
+            quota: decoded['quota'] is Map<String, dynamic>
+                ? AiQuota.fromJson(decoded['quota'] as Map<String, dynamic>)
+                : null,
+          );
+        }
+      }
       throw const FoodAnalysisException('食品分析失敗，請稍後再試。');
     }
     final body = jsonDecode(response.body);
