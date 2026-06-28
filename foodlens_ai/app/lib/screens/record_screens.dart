@@ -42,6 +42,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   bool _analyzing = false;
   bool _saving = false;
   String? _status;
+  AiQuota? _quota;
+  bool _statusIsError = false;
 
   @override
   void initState() {
@@ -70,6 +72,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       _preview = bytes;
       _uploadedImage = null;
       _status = null;
+      _quota = null;
+      _statusIsError = false;
     });
   }
 
@@ -81,6 +85,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     setState(() {
       _analyzing = true;
       _status = '正在上傳並分析圖片…';
+      _quota = null;
+      _statusIsError = false;
     });
     try {
       FoodAnalysisResult result;
@@ -110,10 +116,26 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         setState(() {
           _confidence = result.confidence;
           _status = '分析完成，儲存前可修改任何數值。';
+          _quota = result.quota;
+          _statusIsError = false;
+        });
+      }
+    } on FoodAnalysisException catch (error) {
+      if (mounted) {
+        setState(() {
+          _status = error.message;
+          _quota = error.quota;
+          _statusIsError = true;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _status = '分析失敗，你仍可手動輸入後儲存。');
+      if (mounted) {
+        setState(() {
+          _status = '分析失敗，你仍可手動輸入後儲存。';
+          _quota = null;
+          _statusIsError = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _analyzing = false);
     }
@@ -183,7 +205,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
           ),
           if (_status != null) ...[
             const SizedBox(height: 10),
-            Text(_status!, style: Theme.of(context).textTheme.bodySmall),
+            AnalysisStatusMessage(
+              message: _status!,
+              quota: _quota,
+              isError: _statusIsError,
+            ),
           ],
           const SizedBox(height: 18),
           _RecordFields(
@@ -210,6 +236,32 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       ),
     ),
   );
+}
+
+class AnalysisStatusMessage extends StatelessWidget {
+  const AnalysisStatusMessage({
+    super.key,
+    required this.message,
+    this.quota,
+    this.isError = false,
+  });
+
+  final String message;
+  final AiQuota? quota;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final quotaMessage = quota == null
+        ? ''
+        : '\n每日上限 ${quota!.limit} 次，今日剩餘 ${quota!.remaining} 次。';
+    return Text(
+      '$message$quotaMessage',
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: isError ? Theme.of(context).colorScheme.error : null,
+      ),
+    );
+  }
 }
 
 class RecordDetailScreen extends StatefulWidget {
