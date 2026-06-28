@@ -1,5 +1,6 @@
 const { applicationDefault, cert, getApps, initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 
 function normalizePrivateKey(value) {
@@ -42,10 +43,12 @@ function createFirebaseServices(config) {
       storageBucket: config.storageBucket,
     });
     const auth = getAuth(app);
+    const firestore = getFirestore(app);
     const bucket = getStorage(app).bucket(config.storageBucket);
     services = {
       verifyIdToken: (token) => auth.verifyIdToken(token),
       downloadImage: createDownloadImage(bucket),
+      firestore,
     };
     return services;
   }
@@ -53,6 +56,7 @@ function createFirebaseServices(config) {
   return {
     verifyIdToken: (token) => getServices().verifyIdToken(token),
     downloadImage: (imagePath) => getServices().downloadImage(imagePath),
+    getFirestore: () => getServices().firestore,
   };
 }
 

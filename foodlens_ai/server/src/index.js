@@ -5,9 +5,11 @@ const { loadConfig } = require('./config');
 const { createFirebaseServices } = require('./firebase');
 const { createGeminiFoodAnalyzer } = require('./gemini');
 const { createNodemailerTestMailer } = require('./mailer');
+const { createDailyQuotaService } = require('./quota');
 
 const config = loadConfig();
 const firebase = createFirebaseServices(config.firebase);
+const quota = createDailyQuotaService({ firestore: firebase.getFirestore() });
 
 const app = createApp({
   nodeEnv: config.nodeEnv,
@@ -18,6 +20,7 @@ const app = createApp({
     ? createGeminiFoodAnalyzer(config.geminiApiKey)
     : async () => { throw new Error('GEMINI_API_KEY is required'); },
   sendTestEmail: createNodemailerTestMailer(config.smtp),
+  quota,
 });
 
 const server = app.listen(config.port, '0.0.0.0', () => {

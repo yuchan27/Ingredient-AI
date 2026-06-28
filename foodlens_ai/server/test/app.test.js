@@ -25,6 +25,13 @@ function dependencies(overrides = {}) {
       confidence: 0.88,
       notes: '估算值，請依實際份量調整。',
     }),
+    quota: {
+      reserve: async () => ({
+        key: '2026-06-28_user-123',
+        quota: { limit: 50, used: 1, remaining: 49 },
+      }),
+      refund: async () => {},
+    },
     sendTestEmail: async () => ({ messageId: 'mail-1' }),
     ...overrides,
   };
@@ -106,6 +113,60 @@ test('POST /analyzeFoodImage analyzes an authenticated multipart image', async (
   assert.equal(analyzedImage.mimeType, 'image/jpeg');
   assert.equal(analyzedImage.bytes.toString(), 'fake-image');
   assert.equal(response.body.foodName, '雞胸便當');
+  assert.deepEqual(response.body.quota, { limit: 50, used: 1, remaining: 49 });
+});
+
+test('POST /analyzeFoodImage returns quota details when the daily limit is exhausted', async () => {
+  const error = new Error('Daily AI quota exhausted');
+  error.name = 'DailyQuotaExceededError';
+  error.limit = 5;
+  error.used = 5;
+  const app = createApp(dependencies({
+    quota: {
+      reserve: async () => { throw error; },
+      refund: async () => {},
+    },
+  }));
+
+  const response = await request(app)
+    .post('/analyzeFoodImage')
+    .set('Authorization', 'Bearer valid-token')
+    .attach('image', Buffer.from('fake-image'), {
+      filename: 'meal.jpg',
+      contentType: 'image/jpeg',
+    });
+
+  assert.equal(response.status, 429);
+  assert.deepEqual(response.body, {
+    error: '今天的 AI 次數已用完，請明天再試。',
+    quota: { limit: 5, used: 5, remaining: 0 },
+  });
+});
+
+test('POST /analyzeFoodImage refunds quota when analysis fails', async () => {
+  let refunded;
+  const reservation = {
+    key: '2026-06-28_user-123',
+    quota: { limit: 50, used: 1, remaining: 49 },
+  };
+  const app = createApp(dependencies({
+    analyzeImage: async () => { throw new Error('Gemini unavailable'); },
+    quota: {
+      reserve: async () => reservation,
+      refund: async (value) => { refunded = value; },
+    },
+  }));
+
+  const response = await request(app)
+    .post('/analyzeFoodImage')
+    .set('Authorization', 'Bearer valid-token')
+    .attach('image', Buffer.from('fake-image'), {
+      filename: 'meal.jpg',
+      contentType: 'image/jpeg',
+    });
+
+  assert.equal(response.status, 500);
+  assert.equal(refunded, reservation);
 });
 
 test('POST /analyzeFoodImage rejects images larger than 10 MB', async () => {
@@ -154,6 +215,7 @@ test('POST /analyzeFoodImage downloads and analyzes the owned image', async () =
     carbs: 92,
     confidence: 0.88,
     notes: '估算值，請依實際份量調整。',
+    quota: { limit: 50, used: 1, remaining: 49 },
   });
 });
 

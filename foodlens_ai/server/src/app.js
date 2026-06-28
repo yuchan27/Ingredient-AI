@@ -40,7 +40,19 @@ function createApp(dependencies) {
     downloadImage,
     analyzeImage,
     sendTestEmail,
+    quota,
   } = dependencies;
+
+  async function analyzeWithQuota(identity, image) {
+    const reservation = await quota.reserve(identity);
+    try {
+      const result = await analyzeImage(image);
+      return { ...result, quota: reservation.quota };
+    } catch (error) {
+      await quota.refund(reservation);
+      throw error;
+    }
+  }
 
   const app = express();
   app.disable('x-powered-by');
@@ -85,7 +97,7 @@ function createApp(dependencies) {
 
     if (request.file) {
       try {
-        const result = await analyzeImage({
+        const result = await analyzeWithQuota(decodedToken, {
           bytes: request.file.buffer,
           mimeType: request.file.mimetype,
         });
@@ -110,7 +122,7 @@ function createApp(dependencies) {
 
     try {
       const image = await downloadImage(parsed.data.imagePath);
-      const result = await analyzeImage(image);
+      const result = await analyzeWithQuota(decodedToken, image);
       response.json(result);
     } catch (error) {
       next(error);
@@ -122,6 +134,17 @@ function createApp(dependencies) {
   });
 
   app.use((error, _request, response, _next) => {
+    if (error?.name === 'DailyQuotaExceededError') {
+      response.status(429).json({
+        error: '今天的 AI 次數已用完，請明天再試。',
+        quota: {
+          limit: error.limit,
+          used: error.used,
+          remaining: 0,
+        },
+      });
+      return;
+    }
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
       response.status(413).json({ error: 'Image is too large' });
       return;
