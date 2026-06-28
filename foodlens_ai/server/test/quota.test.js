@@ -99,4 +99,3 @@ test('quota resets on a new UTC date and can refund failed analysis', async () =
   assert.equal(nextDay.quota.used, 1);
   assert.equal(firestore.documents.size, 2);
 });
-
