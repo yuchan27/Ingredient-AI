@@ -31,5 +31,8 @@ void main() {
       'windows/runner/Runner.rc',
     ).readAsStringSync();
     expect(windowsResources, contains('VALUE "ProductName", "食伴 AI"'));
+
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('version: 1.0.1+2'));
   });
 }
