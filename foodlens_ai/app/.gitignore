@@ -46,6 +46,7 @@ app.*.map.json
 
 # Local Firebase/Dart define configuration
 firebase.dev.json
+firebase.release.json
 test-account.local.json
 emulator-registration.local.json
 /android/app/google-services.json
