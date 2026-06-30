@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'auth/auth_action_state.dart';
+import 'auth/cloud_verification_email.dart';
+import 'auth/google_auth_service.dart';
 import 'brand/brand_identity.dart';
 import 'brand/brand_mark.dart';
 import 'config/api_config.dart';
@@ -14,6 +16,12 @@ import 'services/food_analysis_api.dart';
 import 'theme/app_theme.dart';
 
 enum AppMode { firebase, demo, setupRequired }
+
+CloudVerificationEmailSender _verificationEmailSender(User user) =>
+    CloudVerificationEmailSender(
+      refreshIdToken: () => user.getIdToken(true),
+      requestVerificationEmail: user.sendEmailVerification,
+    );
 
 class FoodLensApp extends StatelessWidget {
   const FoodLensApp.firebase({super.key})
@@ -107,7 +115,16 @@ class _AuthGate extends StatelessWidget {
           );
         }
         final user = snapshot.data;
-        if (user == null) return const AuthScreen();
+        if (user == null) {
+          return AuthScreen(
+            googleSignInAvailable: googleSignInConfigured,
+            onGoogleSignIn: googleSignInConfigured
+                ? () async {
+                    await GoogleAuthService().signIn();
+                  }
+                : null,
+          );
+        }
         if (user.isAnonymous) return _LocalDashboard(user: user);
         if (!user.emailVerified) {
           return VerifyEmailScreen(
@@ -116,7 +133,13 @@ class _AuthGate extends StatelessWidget {
               await user.reload();
               await FirebaseAuth.instance.currentUser?.getIdToken(true);
             },
-            onResend: user.sendEmailVerification,
+            onResend: () async {
+              final currentUser = FirebaseAuth.instance.currentUser;
+              if (currentUser == null) {
+                throw FirebaseAuthException(code: 'user-not-found');
+              }
+              await _verificationEmailSender(currentUser).send();
+            },
             onSignOut: FirebaseAuth.instance.signOut,
           );
         }
@@ -235,11 +258,15 @@ class AuthScreen extends StatefulWidget {
     this.onSignIn,
     this.onRegister,
     this.onContinueLocally,
+    this.onGoogleSignIn,
+    this.googleSignInAvailable = false,
   });
 
   final AuthCredentialAction? onSignIn;
   final AuthCredentialAction? onRegister;
   final Future<void> Function()? onContinueLocally;
+  final Future<void> Function()? onGoogleSignIn;
+  final bool googleSignInAvailable;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -249,6 +276,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   bool _registering = false;
   AuthActionState _action = const AuthActionState.idle();
 
@@ -256,7 +284,17 @@ class _AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     super.dispose();
+  }
+
+  void _setRegistering(bool value) {
+    if (_registering == value || _action.isLoading) return;
+    setState(() {
+      _registering = value;
+      _action = const AuthActionState.idle();
+      _confirmPassword.clear();
+    });
   }
 
   Future<void> _submit() async {
@@ -279,12 +317,17 @@ class _AuthScreenState extends State<AuthScreen> {
               () => _action = const AuthActionState.loading('帳號已建立，正在寄送驗證信…'),
             );
           }
-          await credential.user?.sendEmailVerification();
+          final user = credential.user;
+          if (user == null) {
+            throw FirebaseAuthException(code: 'user-not-found');
+          }
+          await _verificationEmailSender(user).send();
         }
         if (mounted) {
           setState(
-            () =>
-                _action = const AuthActionState.success('帳號已建立，請完成 Email 驗證。'),
+            () => _action = const AuthActionState.success(
+              '帳號已建立，Firebase 雲端已接受寄信請求；不需要開發電腦開機。',
+            ),
           );
         }
       } else {
@@ -341,6 +384,31 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    if (!widget.googleSignInAvailable || widget.onGoogleSignIn == null) return;
+    setState(() {
+      _action = const AuthActionState.loading('正在連接 Google…');
+    });
+    try {
+      await widget.onGoogleSignIn!();
+      if (mounted) {
+        setState(() => _action = const AuthActionState.success('Google 登入成功。'));
+      }
+    } on FirebaseAuthException catch (error) {
+      if (mounted) {
+        setState(
+          () => _action = AuthActionState.error(_authMessage(error.code)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _action = const AuthActionState.error('無法使用 Google 登入，請稍後再試。'),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -365,10 +433,38 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _registering ? '建立帳號並開始記錄飲食' : BrandIdentity.tagline,
+                      _registering ? '建立食伴 AI 帳號' : '登入食伴 AI',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _registering
+                          ? '完成 Email 驗證後，即可同步飲食紀錄與使用每日 50 次 AI 分析。'
+                          : '登入後同步飲食紀錄；也可以先使用本機模式。',
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment<bool>(
+                          value: false,
+                          icon: Icon(Icons.login),
+                          label: Text('登入'),
+                        ),
+                        ButtonSegment<bool>(
+                          value: true,
+                          icon: Icon(Icons.person_add_alt_1),
+                          label: Text('建立帳號'),
+                        ),
+                      ],
+                      selected: {_registering},
+                      onSelectionChanged: _action.isLoading
+                          ? null
+                          : (selection) => _setRegistering(selection.first),
+                    ),
+                    const SizedBox(height: 22),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
@@ -389,10 +485,25 @@ class _AuthScreenState extends State<AuthScreen> {
                       decoration: const InputDecoration(
                         labelText: '密碼',
                         prefixIcon: Icon(Icons.lock_outline),
+                        helperText: '至少 6 個字元',
                       ),
                       validator: (value) =>
                           (value?.length ?? 0) >= 6 ? null : '密碼至少 6 個字元',
                     ),
+                    if (_registering) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirmPassword,
+                        obscureText: true,
+                        autofillHints: const [AutofillHints.newPassword],
+                        decoration: const InputDecoration(
+                          labelText: '確認密碼',
+                          prefixIcon: Icon(Icons.lock_reset_outlined),
+                        ),
+                        validator: (value) =>
+                            value == _password.text ? null : '兩次輸入的密碼不一致',
+                      ),
+                    ],
                     if (_action.isError) ...[
                       const SizedBox(height: 12),
                       Text(
@@ -416,7 +527,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 20),
                     FilledButton.icon(
                       onPressed: _action.isLoading ? null : _submit,
-                      icon: _action.isLoading && _action.message != '正在啟用本機模式…'
+                      icon:
+                          _action.isLoading &&
+                              _action.message != '正在啟用本機模式…' &&
+                              _action.message != '正在連接 Google…'
                           ? const SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
@@ -426,14 +540,39 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ? Icons.person_add_alt_1
                                   : Icons.login,
                             ),
-                      label: Text(_registering ? '註冊帳號' : '登入'),
+                      label: Text(_registering ? '建立帳號並寄出驗證信' : '登入'),
                     ),
-                    TextButton(
-                      onPressed: _action.isLoading
-                          ? null
-                          : () => setState(() => _registering = !_registering),
-                      child: Text(_registering ? '已有帳號？回登入' : '還沒有帳號？免費註冊'),
-                    ),
+                    if (widget.googleSignInAvailable) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '或',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _action.isLoading ? null : _signInWithGoogle,
+                        icon:
+                            _action.isLoading &&
+                                _action.message == '正在連接 Google…'
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.g_mobiledata, size: 28),
+                        label: const Text('使用 Google 繼續'),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _action.isLoading ? null : _continueLocally,
@@ -467,8 +606,12 @@ String _authMessage(String code) => switch (code) {
   'invalid-credential' => 'Email 或密碼錯誤。',
   'weak-password' => '密碼強度不足。',
   'network-request-failed' => '網路連線失敗，請稍後再試。',
+  'invalid-user-token' || 'user-token-expired' => '登入狀態已失效，請重新登入後再寄送驗證信。',
+  'user-not-found' => '找不到目前帳號，請重新登入。',
   'operation-not-allowed' => '此登入方式尚未啟用，請稍後再試。',
   'too-many-requests' => '操作過於頻繁，請稍後再試。',
+  'google-sign-in-not-configured' => 'Google 登入尚未完成 Firebase 設定。',
+  'invalid-google-id-token' => 'Google 登入憑證無效，請重新選擇帳號。',
   _ => '無法完成操作，請檢查資料後再試。',
 };
 

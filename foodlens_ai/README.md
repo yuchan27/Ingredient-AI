@@ -1,28 +1,28 @@
-# FoodLens AI
+# 食伴 AI（FoodLens AI）
 
-FoodLens AI is a local-first Flutter nutrition analysis app with Firebase
-Authentication, Cloud Firestore synchronization, an Express API, and Gemini
-image analysis with Gemma fallback.
+食伴 AI 是 Flutter 本地優先飲食分析 App，使用 Firebase Authentication、
+Cloud Firestore、Vercel Express API 與 Gemini 圖片分析。
 
 ## Android APK
 
-Download the signed `v1.0.0` APK from the
-[GitHub Release](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.0/FoodLens-AI-v1.0.0.apk).
-After signing in on a physical phone, set the deployed HTTPS API URL under
-`Settings > API host` before using image analysis.
+最新簽章 APK：[Food-Companion-v1.0.2.apk](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.2/Food-Companion-v1.0.2.apk)。
+大小 `53,277,402 bytes`，SHA-256
+`ED0F933E7CC33578F733D561CB71441DB5BB7813350F8C1F9C3CCD2C3C27E10E`，
+APK Signature Scheme v2 驗證通過。
+正式 API 已內建 `https://food-companion-api.vercel.app`，不依賴開發電腦。
 
 ## Features
 
-- Email/password registration, verification, login, and logout
-- Food-label image analysis with editable calories and macronutrients
-- Local private image storage with offline Firestore record access
-- Daily calories, nutrition trends, meal suggestions, cost tracking, and notes
-- Record create, edit, delete, voice input, and feedback submission
-- Token-authenticated API with MIME validation, size limits, and rate limiting
+- 分離的登入／建立帳號介面與確認密碼驗證
+- Firebase 雲端 Email 驗證信、重寄與狀態更新
+- 條件式 Google 登入（需 Firebase provider、SHA-1 與 Web OAuth client）
+- 訪客本機模式每日 5 次、已驗證帳號每日 50 次 AI 分析
+- 食品標示辨識、營養趨勢、餐點建議、餐費與離線同步
+- Firebase token 驗證、MIME/大小限制與 Vercel 速率限制
 
 ## Local Run
 
-Start the API:
+啟動本機 API：
 
 ```powershell
 cd foodlens_ai\server
@@ -30,7 +30,7 @@ npm install
 npm start
 ```
 
-Run the Android app on an Emulator:
+啟動 Android App：
 
 ```powershell
 cd foodlens_ai\app
@@ -38,9 +38,9 @@ flutter pub get
 flutter run --dart-define-from-file=firebase.dev.json
 ```
 
-The Android Emulator connects to the local API through
-`http://10.0.2.2:3000`. Physical devices must use an HTTPS Cloud Run or ngrok
-URL through `API_BASE_URL`.
+Android Emulator 可使用 `http://10.0.2.2:3000`。正式裝置使用
+`https://food-companion-api.vercel.app`。Firebase 驗證信由 Google 雲端寄出，
+不使用本機 API 或 Gmail SMTP。
 
 ## Verification
 
@@ -54,5 +54,4 @@ flutter analyze
 flutter test --no-pub
 ```
 
-See [setup.md](docs/setup.md) for Firebase and release-signing setup, and
-[deploy-cloud-run.md](docs/deploy-cloud-run.md) for deployment details.
+詳見 [setup.md](docs/setup.md) 與 [deploy-vercel.md](docs/deploy-vercel.md)。

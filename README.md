@@ -1,44 +1,60 @@
-# FoodLens AI
+# 食伴 AI（FoodLens AI）
 
-FoodLens AI 是以 Flutter、Firebase Authentication、Cloud Firestore、Node.js
-與 Gemini 建立的本地優先飲食分析 App。
+食伴 AI 是以 Flutter、Firebase Authentication、Cloud Firestore、Vercel 與
+Gemini 建立的本地優先飲食分析 Android App。正式 AI API 部署於
+[`https://food-companion-api.vercel.app`](https://food-companion-api.vercel.app)，
+開發電腦關機後仍可使用。
 
-最新程式碼位於 [`foodlens_ai/`](foodlens_ai/)：
+## 帳號與 Email 驗證
 
-- `foodlens_ai/app`：Flutter Android App
-- `foodlens_ai/server`：Express API、Firebase Token 驗證與 Gemini 圖片分析
-- `foodlens_ai/firestore.rules`：Firestore 使用者資料隔離規則
-- `foodlens_ai/storage.rules`：Firebase Storage 使用者路徑規則
-- `foodlens_ai/docs`：本機設定與 Cloud Run 部署說明
+- 登入與建立帳號使用不同標題、說明與操作狀態，避免使用者混淆。
+- 建立帳號要求再次輸入確認密碼；兩次密碼不同時不會送出註冊。
+- 註冊後由 Firebase Authentication 雲端直接寄出驗證信，不經本機 Node、SMTP 或 Vercel API。
+- 寄信前會強制更新 Firebase ID token；token 無效時不會顯示成功訊息。
+- 驗證頁可重新寄信與更新驗證狀態，錯誤會顯示可操作的中文訊息。
+- Google 登入程式已整合；只有在 Firebase 啟用 `google.com` provider 並於建置設定
+  `GOOGLE_SERVER_CLIENT_ID` 時才顯示按鈕，避免未設定完成卻提供必定失敗的入口。
 
 ## 主要功能
 
-- Email/Password 註冊、驗證信、登入與登出
-- 食品標示圖片分析，結果可手動修改
-- 熱量、蛋白質、脂肪、碳水、餐別、日期、備註與餐費紀錄
-- 今日總覽、七日分析與下一餐建議
-- Firestore 離線快取，恢復連線後自動同步
-- 實機可在 App 設定中切換 Cloud Run 或 ngrok API URL
+- 訪客本機模式：飲食資料只留在裝置，每日 5 次 AI 圖片分析。
+- 已驗證帳號：Firestore 雲端同步與離線快取，每日 50 次 AI 圖片分析。
+- 食品標示辨識、熱量與三大營養素、成分重點及可編輯結果。
+- 今日總覽、七日趨勢、下一餐建議、餐費、備註與意見回饋。
+- Vercel 後端驗證 Firebase token 並強制執行每日額度。
 
 ## 下載 APK
 
-請到 [GitHub Releases](https://github.com/yuchan27/Ingredient-AI/releases)
-下載最新簽章 APK。
+下載 [食伴 AI v1.0.2 APK](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.2/Food-Companion-v1.0.2.apk)。
+本次版本為 `versionName 1.0.2`／`versionCode 3`，檔案大小 `53,277,402 bytes`，
+SHA-256：`ED0F933E7CC33578F733D561CB71441DB5BB7813350F8C1F9C3CCD2C3C27E10E`。
+APK Signature Scheme v2 驗證通過，package 為 `com.foodlens.foodlens_ai_app`。
+v1.0.1 的既有公開檔案與 SHA-256 保持不變。
+
+## 專案結構
+
+- `foodlens_ai/app`：Flutter Android App
+- `foodlens_ai/server`：Express/Vercel API、Firebase token 驗證與 Gemini 圖片分析
+- `foodlens_ai/firestore.rules`：Firestore 使用者資料隔離規則
+- `foodlens_ai/docs`：Firebase、Vercel 與 release 設定
 
 ## 開發與測試
 
 ```powershell
 cd foodlens_ai\server
-npm install
+npm ci
 npm test
-npm start
+npm run check
 
 cd ..\app
 flutter pub get
 flutter analyze
-flutter test
+flutter test --no-pub
 flutter run --dart-define-from-file=firebase.dev.json
 ```
 
-Android Emulator 會使用 `http://10.0.2.2:3000` 連到本機 API。完整設定請參考
+正式或實機建置必須設定 `API_BASE_URL=https://food-companion-api.vercel.app`。
+若要啟用 Google 登入，另需在 Firebase Console 啟用 Google provider、加入 release
+SHA-1，建立 Web OAuth client，並在 JSON 建置設定加入
+`"GOOGLE_SERVER_CLIENT_ID": "...apps.googleusercontent.com"`。完整說明見
 [`foodlens_ai/docs/setup.md`](foodlens_ai/docs/setup.md)。

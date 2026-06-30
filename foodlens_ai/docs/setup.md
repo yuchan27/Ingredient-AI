@@ -11,10 +11,11 @@
 
 1. 在 Firebase Console 建立專案。
 2. Authentication > Sign-in method 同時啟用 **Email/Password** 與 **Anonymous**。匿名驗證只提供後端可信 token，不會把本機飲食紀錄同步到雲端。
-3. 建立 Cloud Firestore，正式環境不要選測試模式。
-4. Spark 免費方案不啟用 Firebase Storage；圖片保存在 App 本機目錄，分析時直接上傳後端。
-5. 新增 Android App，package name 為 `com.foodlens.foodlens_ai_app`。
-6. 從專案設定取得 API key、App ID、Sender ID 與 Project ID。`FIREBASE_STORAGE_BUCKET` 保留給未來 Blaze 方案使用。
+3. 若要啟用 Google 登入，另啟用 **Google** provider，並在 Android App 設定加入 release SHA-1。建立 Web OAuth client 後，保存其 `...apps.googleusercontent.com` client ID。
+4. 建立 Cloud Firestore，正式環境不要選測試模式。
+5. Spark 免費方案不啟用 Firebase Storage；圖片保存在 App 本機目錄，分析時直接上傳後端。
+6. 新增 Android App，package name 為 `com.foodlens.foodlens_ai_app`。
+7. 從專案設定取得 API key、App ID、Sender ID 與 Project ID。`FIREBASE_STORAGE_BUCKET` 保留給未來 Blaze 方案使用。
 
 部署安全規則：
 
@@ -28,6 +29,8 @@ firebase deploy --only firestore:rules
 ## 3. Flutter 開發設定
 
 複製 `app/firebase.dev.json.example` 為 `app/firebase.dev.json`，填入 Firebase 用戶端設定。該檔案已被 Git 忽略。
+
+`GOOGLE_SERVER_CLIENT_ID` 是選用欄位。只有 provider、release SHA-1 與 Web OAuth client 都完成後才填入；未設定時 App 不顯示 Google 登入按鈕，避免使用者點到無法完成的流程。
 
 Pixel 9 Emulator 連到電腦的 port 3000 必須使用 `http://10.0.2.2:3000`。食品圖片以 multipart `image` 欄位直接傳給 `/analyzeFoodImage`，不需要 Storage。
 
@@ -113,7 +116,7 @@ cd C:\Users\wuwu6\StudioProjects\App_medium\foodlens_ai\app
 flutter build apk --release --dart-define-from-file=firebase.release.json
 ```
 
-`firebase.release.json` 必須包含 `FIREBASE_API_KEY`、`FIREBASE_APP_ID`、`FIREBASE_MESSAGING_SENDER_ID`、`FIREBASE_PROJECT_ID`、選用的 `FIREBASE_STORAGE_BUCKET`，以及 `API_BASE_URL=https://food-companion-api.vercel.app`；不要設定 `DEMO_MODE=true`。目前正式部署與驗證步驟見 `docs/deploy-vercel.md`，Cloud Run 則保留作未來替代方案。
+`firebase.release.json` 必須包含 `FIREBASE_API_KEY`、`FIREBASE_APP_ID`、`FIREBASE_MESSAGING_SENDER_ID`、`FIREBASE_PROJECT_ID`、選用的 `FIREBASE_STORAGE_BUCKET`，以及 `API_BASE_URL=https://food-companion-api.vercel.app`；Google 登入設定完成後再加入 `GOOGLE_SERVER_CLIENT_ID`。不要設定 `DEMO_MODE=true`。目前正式部署與驗證步驟見 `docs/deploy-vercel.md`，Cloud Run 則保留作未來替代方案。
 
 輸出檔案位於 `app/build/app/outputs/flutter-apk/app-release.apk`。正式測試版也可直接從
 [GitHub Releases](https://github.com/yuchan27/Ingredient-AI/releases)
