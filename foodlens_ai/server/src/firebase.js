@@ -21,14 +21,8 @@ function createDownloadImage(bucket) {
   };
 }
 
-function createFirebaseServices(config) {
-  let services;
-  function getServices() {
-    if (services) return services;
-    if (!config.storageBucket) {
-      throw new Error('FIREBASE_STORAGE_BUCKET is required');
-    }
-
+function createFirebaseServices(config, dependencies = {}) {
+  const getOrInitializeApp = dependencies.getOrInitializeApp || (() => {
     const credential = config.clientEmail && config.privateKey
       ? cert({
         projectId: config.projectId,
@@ -37,26 +31,47 @@ function createFirebaseServices(config) {
       })
       : applicationDefault();
 
-    const app = getApps()[0] || initializeApp({
+    return getApps()[0] || initializeApp({
       credential,
       projectId: config.projectId || undefined,
-      storageBucket: config.storageBucket,
+      storageBucket: config.storageBucket || undefined,
     });
-    const auth = getAuth(app);
-    const firestore = getFirestore(app);
-    const bucket = getStorage(app).bucket(config.storageBucket);
-    services = {
-      verifyIdToken: (token) => auth.verifyIdToken(token),
-      downloadImage: createDownloadImage(bucket),
-      firestore,
+  });
+  const authFor = dependencies.authFor || getAuth;
+  const firestoreFor = dependencies.firestoreFor || getFirestore;
+  const storageFor = dependencies.storageFor || (
+    (app, bucketName) => getStorage(app).bucket(bucketName)
+  );
+
+  let coreServices;
+  let downloadImage;
+  function getCoreServices() {
+    if (coreServices) return coreServices;
+    const app = getOrInitializeApp();
+    coreServices = {
+      app,
+      auth: authFor(app),
+      firestore: firestoreFor(app),
     };
-    return services;
+    return coreServices;
+  }
+
+  function getDownloadImage() {
+    if (downloadImage) return downloadImage;
+    if (!config.storageBucket) {
+      throw new Error('FIREBASE_STORAGE_BUCKET is required for legacy image paths');
+    }
+    const services = getCoreServices();
+    downloadImage = createDownloadImage(
+      storageFor(services.app, config.storageBucket),
+    );
+    return downloadImage;
   }
 
   return {
-    verifyIdToken: (token) => getServices().verifyIdToken(token),
-    downloadImage: (imagePath) => getServices().downloadImage(imagePath),
-    getFirestore: () => getServices().firestore,
+    verifyIdToken: (token) => getCoreServices().auth.verifyIdToken(token),
+    downloadImage: async (imagePath) => getDownloadImage()(imagePath),
+    getFirestore: () => getCoreServices().firestore,
   };
 }
 

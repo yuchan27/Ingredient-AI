@@ -78,6 +78,30 @@ void main() {
     expect(registrationAttempts, 0);
   });
 
+  testWidgets('registration sends the exact entered email address', (
+    tester,
+  ) async {
+    String? submittedEmail;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AuthScreen(
+          onRegister: (email, _) async => submittedEmail = email,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('建立帳號'));
+    await tester.pump();
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'C112151139@nkust.edu.tw');
+    await tester.enterText(fields.at(1), 'secret1');
+    await tester.enterText(fields.at(2), 'secret1');
+    await tester.tap(find.text('建立帳號並寄出驗證信'));
+    await tester.pumpAndSettle();
+
+    expect(submittedEmail, 'C112151139@nkust.edu.tw');
+  });
+
   testWidgets('configured Google sign-in shows progress and success feedback', (
     tester,
   ) async {
@@ -142,7 +166,7 @@ void main() {
       MaterialApp(
         home: VerifyEmailScreen(
           email: 'user@example.com',
-          onRefresh: () async {},
+          onRefresh: () async => false,
           onResend: () => completer.future,
           onSignOut: () async {},
           resendCooldown: const Duration(seconds: 2),
@@ -165,12 +189,50 @@ void main() {
     expect(find.textContaining('1 秒'), findsOneWidget);
   });
 
+  testWidgets('verification refresh shows completed feedback', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerifyEmailScreen(
+          email: 'user@example.com',
+          onRefresh: () async => true,
+          onResend: () async {},
+          onSignOut: () async {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('我已完成驗證'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Email 驗證已完成。'), findsNWidgets(2));
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('verification refresh shows pending feedback', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerifyEmailScreen(
+          email: 'user@example.com',
+          onRefresh: () async => false,
+          onResend: () async {},
+          onSignOut: () async {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('我已完成驗證'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('尚未完成驗證。信件可能仍在傳送，請稍候片刻，並檢查垃圾郵件後再試。'), findsNWidgets(2));
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
   testWidgets('verification refresh shows failure feedback', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: VerifyEmailScreen(
           email: 'user@example.com',
-          onRefresh: () => Future<void>.error(StateError('network')),
+          onRefresh: () => Future<bool>.error(StateError('network')),
           onResend: () async {},
           onSignOut: () async {},
         ),

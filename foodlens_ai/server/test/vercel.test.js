@@ -7,7 +7,7 @@ test('cloud runtime stays on Node 22 LTS', () => {
 });
 
 test('Firebase Admin stays on the CommonJS-compatible serverless release', () => {
-  assert.equal(packageJson.dependencies['firebase-admin'], '13.6.0');
+  assert.equal(packageJson.dependencies['firebase-admin'], '14.1.0');
 });
 
 test('Vercel entry exports the Express application without opening a listener', () => {

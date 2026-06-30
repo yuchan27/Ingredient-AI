@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _apiBaseUrlKey = 'api_base_url';
+
+bool apiEndpointOverridesEnabled({bool? isDebugMode}) =>
+    isDebugMode ?? kDebugMode;
 
 String normalizeApiEndpoint(String value) {
   final trimmed = value.trim().replaceFirst(RegExp(r'/+$'), '');

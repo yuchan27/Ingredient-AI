@@ -132,6 +132,7 @@ class _AuthGate extends StatelessWidget {
             onRefresh: () async {
               await user.reload();
               await FirebaseAuth.instance.currentUser?.getIdToken(true);
+              return FirebaseAuth.instance.currentUser?.emailVerified == true;
             },
             onResend: () async {
               final currentUser = FirebaseAuth.instance.currentUser;
@@ -162,13 +163,14 @@ class _AuthenticatedDashboardState extends State<_AuthenticatedDashboard> {
   late final FirebaseFoodRepository repository;
   late FoodAnalysisApi api;
   final _endpointStore = ApiEndpointStore();
+  final _endpointOverridesEnabled = apiEndpointOverridesEnabled();
 
   @override
   void initState() {
     super.initState();
     repository = FirebaseFoodRepository(uid: widget.user.uid);
     api = FoodAnalysisApi(baseUrl: apiBaseUrl);
-    unawaited(_loadApiEndpoint());
+    if (_endpointOverridesEnabled) unawaited(_loadApiEndpoint());
   }
 
   Future<void> _loadApiEndpoint() async {
@@ -194,7 +196,7 @@ class _AuthenticatedDashboardState extends State<_AuthenticatedDashboard> {
     accountEmail: widget.user.email ?? '已登入帳號',
     isDemo: false,
     tokenProvider: () async => (await widget.user.getIdToken(true)) ?? '',
-    onApiBaseUrlChanged: _updateApiEndpoint,
+    onApiBaseUrlChanged: _endpointOverridesEnabled ? _updateApiEndpoint : null,
     onLogout: () => FirebaseAuth.instance.signOut(),
   );
 }
@@ -211,13 +213,14 @@ class _LocalDashboardState extends State<_LocalDashboard> {
   late final LocalFoodRepository repository;
   late FoodAnalysisApi api;
   final _endpointStore = ApiEndpointStore();
+  final _endpointOverridesEnabled = apiEndpointOverridesEnabled();
 
   @override
   void initState() {
     super.initState();
     repository = LocalFoodRepository();
     api = FoodAnalysisApi(baseUrl: apiBaseUrl);
-    unawaited(_loadApiEndpoint());
+    if (_endpointOverridesEnabled) unawaited(_loadApiEndpoint());
   }
 
   Future<void> _loadApiEndpoint() async {
@@ -244,7 +247,7 @@ class _LocalDashboardState extends State<_LocalDashboard> {
     isDemo: false,
     isLocalOnly: true,
     tokenProvider: () async => (await widget.user.getIdToken(true)) ?? '',
-    onApiBaseUrlChanged: _updateApiEndpoint,
+    onApiBaseUrlChanged: _endpointOverridesEnabled ? _updateApiEndpoint : null,
     onLogout: () => FirebaseAuth.instance.signOut(),
   );
 }
@@ -626,7 +629,7 @@ class VerifyEmailScreen extends StatefulWidget {
   });
 
   final String email;
-  final Future<void> Function() onRefresh;
+  final Future<bool> Function() onRefresh;
   final Future<void> Function() onResend;
   final Future<void> Function() onSignOut;
   final Duration resendCooldown;
@@ -687,13 +690,35 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   Future<void> _refresh() async {
-    await _runAction(
-      action: _VerificationAction.refresh,
-      loadingMessage: '正在更新驗證狀態…',
-      successMessage: '驗證狀態已更新。',
-      failureMessage: '無法更新驗證狀態，請稍後再試。',
-      operation: widget.onRefresh,
-    );
+    const completedMessage = 'Email 驗證已完成。';
+    const pendingMessage = '尚未完成驗證。信件可能仍在傳送，請稍候片刻，並檢查垃圾郵件後再試。';
+    const failureMessage = '無法更新驗證狀態，請稍後再試。';
+    setState(() {
+      _activeAction = _VerificationAction.refresh;
+      _action = const AuthActionState.loading('正在確認驗證狀態…');
+    });
+    try {
+      final isVerified = await widget.onRefresh();
+      if (!mounted) return;
+      final message = isVerified ? completedMessage : pendingMessage;
+      setState(() => _action = AuthActionState.success(message));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = _authMessage(error.code);
+      setState(() => _action = AuthActionState.error(message));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _action = const AuthActionState.error(failureMessage));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(failureMessage)));
+    }
   }
 
   Future<void> _resend() async {

@@ -38,4 +38,9 @@ void main() {
       'http://10.0.2.2:3000',
     );
   });
+
+  test('disables user-controlled API endpoint overrides in release builds', () {
+    expect(apiEndpointOverridesEnabled(isDebugMode: false), isFalse);
+    expect(apiEndpointOverridesEnabled(isDebugMode: true), isTrue);
+  });
 }
