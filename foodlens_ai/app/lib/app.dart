@@ -20,6 +20,7 @@ enum AppMode { firebase, demo, setupRequired }
 CloudVerificationEmailSender _verificationEmailSender(User user) =>
     CloudVerificationEmailSender(
       refreshIdToken: () => user.getIdToken(true),
+      configureLanguage: FirebaseAuth.instance.setLanguageCode,
       requestVerificationEmail: user.sendEmailVerification,
     );
 

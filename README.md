@@ -10,6 +10,7 @@ Gemini 建立的本地優先飲食分析 Android App。正式 AI API 部署於
 - 登入與建立帳號使用不同標題、說明與操作狀態，避免使用者混淆。
 - 建立帳號要求再次輸入確認密碼；兩次密碼不同時不會送出註冊。
 - 註冊後由 Firebase Authentication 雲端直接寄出驗證信，不經本機 Node、SMTP 或 Vercel API。
+- 註冊與重寄前固定設定 Firebase 語系為 `zh-TW`，使用繁體中文驗證信。
 - App 只會移除 Email 前後空白，不會加入 `+foodlenscloud...` 或改寫地址；例如輸入
   `C112151139@nkust.edu.tw` 就會把同一個完整地址交給 Firebase。
 - 寄信前會強制更新 Firebase ID token；token 無效時不會顯示成功訊息。
@@ -31,9 +32,9 @@ Gemini 建立的本地優先飲食分析 Android App。正式 AI API 部署於
 
 ## 下載 APK
 
-下載 [食伴 AI v1.0.3 APK](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.3/Food-Companion-v1.0.3.apk)。
-本次版本為 `versionName 1.0.3`／`versionCode 4`，檔案大小 `53,211,866 bytes`，
-SHA-256：`7F137C78CDF23F1DC32FD9F6084EB04A80075547D7451A54A1E64E6EEFC4DE00`。
+下載 [食伴 AI v1.0.4 APK](https://github.com/yuchan27/Ingredient-AI/releases/download/v1.0.4/Food-Companion-v1.0.4.apk)。
+本次版本為 `versionName 1.0.4`／`versionCode 5`，檔案大小 `53,211,862 bytes`，
+SHA-256：`E8FD6268B627ED79A394AA39935EBDFD19B4D4F9DB52B36D9BCB4B23420D9C99`。
 APK Signature Scheme v2 驗證通過，package 為 `com.foodlens.foodlens_ai_app`。
 既有 Release 檔案與 SHA-256 保持不變。
 

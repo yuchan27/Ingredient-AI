@@ -33,6 +33,6 @@ void main() {
     expect(windowsResources, contains('VALUE "ProductName", "食伴 AI"'));
 
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(pubspec, contains('version: 1.0.3+4'));
+    expect(pubspec, contains('version: 1.0.4+5'));
   });
 }

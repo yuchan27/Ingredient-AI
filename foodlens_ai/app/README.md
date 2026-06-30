@@ -8,6 +8,7 @@ Cloud Firestore 與 `https://food-companion-api.vercel.app`，不需要開發電
 註冊時只會對輸入地址執行 `trim()`，不會加入 `+foodlenscloud...` 等別名。Firebase
 Authentication 建立帳號後由 Google 雲端寄送驗證信。點選「我已完成驗證」會重新載入
 Firebase 使用者並檢查 `emailVerified`，畫面分別顯示已完成、尚未完成／請稍候，或連線失敗。
+每次寄送前都會設定 Firebase 語系為 `zh-TW`，因此使用繁體中文驗證信。
 
 ## 正式建置
 

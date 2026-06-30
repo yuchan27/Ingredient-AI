@@ -7,13 +7,18 @@ void main() {
     'requests Firebase verification email after refreshing a valid token',
     () async {
       var emailRequested = false;
+      String? configuredLanguage;
       final sender = CloudVerificationEmailSender(
         refreshIdToken: () async => 'fresh-token',
+        configureLanguage: (languageCode) async {
+          configuredLanguage = languageCode;
+        },
         requestVerificationEmail: () async => emailRequested = true,
       );
 
       await sender.send();
 
+      expect(configuredLanguage, 'zh-TW');
       expect(emailRequested, isTrue);
     },
   );
@@ -24,6 +29,7 @@ void main() {
       var emailRequested = false;
       final sender = CloudVerificationEmailSender(
         refreshIdToken: () async => null,
+        configureLanguage: (_) async {},
         requestVerificationEmail: () async => emailRequested = true,
       );
 

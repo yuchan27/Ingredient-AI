@@ -74,6 +74,14 @@ Invoke-RestMethod -Method Post http://localhost:3000/sendTestEmail -ContentType 
 
 App 的註冊使用 Firebase Authentication。建立帳號後會呼叫 `sendEmailVerification()`，未驗證前不會進入食品資料頁。註冊、重寄與更新驗證狀態都有 loading、成功與失敗回饋；重寄成功後會短暫冷卻，避免重複點擊。Firebase Authentication 在 Google 雲端寄送驗證信，開發電腦與本機 Node server 關機後仍可寄送。Gmail SMTP 只供後端開發測試，不參與 App 帳號驗證，也不儲存 App 使用者密碼。
 
+寄送前 App 會呼叫 `FirebaseAuth.instance.setLanguageCode('zh-TW')`，讓 Firebase 使用繁體中文驗證信。若要進一步自訂文字，請在 Firebase Console 的 Authentication → Templates → Email address verification 編輯範本。建議內容：
+
+- 寄件者名稱：`食伴 AI`
+- 主旨：`請驗證你的食伴 AI Email`
+- 內文：`您好，歡迎使用食伴 AI。請點選 %LINK% 完成 Email 驗證。如果不是你建立此帳號，請忽略這封信。`
+
+信件被分類為垃圾郵件通常是寄件網域信譽或郵件驗證設定造成，並非 App 本機寄信失敗。正式環境應在 Firebase Email Templates 使用已驗證的自訂網域，並依 Firebase 提供的 DNS 資料設定 SPF／CNAME；只有修改內文無法保證通過每一個收件系統的垃圾郵件判斷。
+
 登入頁的「先用本機模式」會執行 Firebase 匿名登入以取得 API token，但飲食紀錄只存放在該裝置的 `LocalFoodRepository`，不寫入 Firestore 且不跨裝置同步。匿名使用者每日可做 5 次 AI 圖片分析；已完成 Email 驗證的帳號每日 50 次，兩者都由後端依 UTC 日期強制執行。
 
 驗證信由 Firebase 雲端寄送，與開發電腦或 Node server 是否開機無關。正式環境不公開 `/sendTestEmail`。
